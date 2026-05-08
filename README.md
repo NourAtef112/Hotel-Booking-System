@@ -28,14 +28,22 @@ university-guest-housing/
 └── README.md
 ```
 
+## Documentation
+
+Detailed technical documentation is available in the `docs/` directory:
+- [Architecture Overview](docs/architecture.md) - System design and data flow.
+- [Requirements](docs/requirements.md) - Functional and non-functional requirements.
+- [Design Document](docs/design.md) - High-level design decisions.
+
 ## Engineering Lifecycle
 
 This project follows the full Software Engineering cycle:
 
 1. **Requirements** → `docs/requirements.md`
 2. **Design** → `docs/design.md`
-3. **Implementation** → `backend/` + `mobile-app/`
-4. **Validation** → `tests/` + `gherkin/` + `docs/validation.md`
+3. **Architecture** → `docs/architecture.md`
+4. **Implementation** → `backend/` + `mobile-app/`
+5. **Validation** → `tests/` + `gherkin/` + `docs/validation.md`
 
 ## Quick Start
 
