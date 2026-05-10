@@ -10,3 +10,10 @@ Feature: User Login
     And I click "Login"
     Then I should be redirected to the home screen
     And I should see my name "John Doe" in the header
+
+  Scenario: Invalid credentials
+    Given I am on the login page
+    When I enter my email "john@example.com" and password "WrongPassword"
+    And I click "Login"
+    Then I should see an error message "Invalid email or password"
+    And I should remain on the login page
