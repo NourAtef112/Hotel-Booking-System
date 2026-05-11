@@ -1,45 +1,53 @@
 """
 user_repository.py — Data access layer for User entities.
-All functions are stubs. No DB logic implemented.
 """
+from typing import Optional
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User
 
 
-async def create_user(user_data: dict) -> dict:
+async def create_user(session: AsyncSession, user_data: dict) -> User:
     """
     Insert a new user record into the database.
-    TODO: Use SQLAlchemy async session
-    TODO: Return the created user object
     """
-    pass
+    user = User(**user_data)
+    session.add(user)
+    await session.flush()
+    await session.refresh(user)
+    return user
 
 
-async def get_by_email(email: str) -> dict | None:
+async def get_by_email(session: AsyncSession, email: str) -> Optional[User]:
     """
     Find a user by their email address.
-    TODO: SELECT * FROM users WHERE email = :email
     """
-    pass
+    result = await session.execute(select(User).where(User.email == email))
+    return result.scalar_one_or_none()
 
 
-async def get_by_id(user_id: int) -> dict | None:
+async def get_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
     """
     Find a user by their primary key ID.
-    TODO: SELECT * FROM users WHERE id = :user_id
     """
-    pass
+    result = await session.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
 
 
-async def update_user(user_id: int, update_data: dict) -> dict:
+async def update_user(session: AsyncSession, user_id: int, update_data: dict) -> Optional[User]:
     """
     Update user fields.
-    TODO: UPDATE users SET ... WHERE id = :user_id
     """
-    pass
+    stmt = update(User).where(User.id == user_id).values(**update_data).returning(User)
+    result = await session.execute(stmt)
+    await session.flush()
+    return result.scalar_one_or_none()
 
 
-async def delete_user(user_id: int) -> None:
+async def delete_user(session: AsyncSession, user_id: int) -> None:
     """
     Soft-delete a user record.
-    TODO: SET is_active = false WHERE id = :user_id
     """
-    pass
+    stmt = update(User).where(User.id == user_id).values(is_active=False)
+    await session.execute(stmt)
+    await session.flush()
