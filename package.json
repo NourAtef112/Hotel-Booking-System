@@ -1,0 +1,13 @@
+{
+  "name": "university-guest-housing-e2e",
+  "version": "1.0.0",
+  "description": "E2E API validation suite for the University Guest Housing Booking System",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright test --reporter=html && playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

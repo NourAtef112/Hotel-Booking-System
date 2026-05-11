@@ -25,3 +25,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+playwright-report/
+test-results/
+postman_environment.json
