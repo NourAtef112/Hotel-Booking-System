@@ -20,3 +20,31 @@ npm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python virtual environments
+venv/
+.venv/
+env/
+
+# Test coverage reports
+htmlcov/
+.coverage.*
+coverage.xml
+
+# Build & distribution artifacts
+dist/
+build/
+
+# Logs
+*.log
+
+# SQLite (used in local testing)
+*.sqlite3
+*.db
+
+# Alembic local override
+alembic.ini.local
+
+# Editor swap files
+*.swp
+*~
