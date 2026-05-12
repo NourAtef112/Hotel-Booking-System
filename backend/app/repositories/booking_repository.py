@@ -63,3 +63,8 @@ async def update_status(session: AsyncSession, booking_id: int, new_status: str)
     result = await session.execute(stmt)
     await session.flush()
     return result.scalar_one_or_none()
+
+
+async def cancel(session: AsyncSession, booking_id: int) -> Optional[Booking]:
+    """Cancel a booking by setting its status to 'cancelled'."""
+    return await update_status(session, booking_id, "cancelled")
