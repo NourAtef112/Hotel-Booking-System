@@ -10,9 +10,7 @@ from app.models.booking import Booking
 
 
 async def create(session: AsyncSession, booking_data: dict) -> Booking:
-    """
-    Insert a new booking record.
-    """
+    """Insert a new booking record."""
     booking = Booking(**booking_data)
     session.add(booking)
     await session.flush()
@@ -21,17 +19,13 @@ async def create(session: AsyncSession, booking_data: dict) -> Booking:
 
 
 async def find_by_id(session: AsyncSession, booking_id: int) -> Optional[Booking]:
-    """
-    Find a single booking by ID.
-    """
+    """Find a single booking by ID."""
     result = await session.execute(select(Booking).where(Booking.id == booking_id))
     return result.scalar_one_or_none()
 
 
 async def find_by_user_id(session: AsyncSession, user_id: int) -> List[Booking]:
-    """
-    Find all bookings for a given user.
-    """
+    """Find all bookings for a given user."""
     result = await session.execute(
         select(Booking).where(Booking.user_id == user_id).order_by(Booking.created_at.desc())
     )
@@ -39,20 +33,17 @@ async def find_by_user_id(session: AsyncSession, user_id: int) -> List[Booking]:
 
 
 async def find_all(session: AsyncSession, page: int = 1, page_size: int = 20) -> List[Booking]:
-    """
-    Retrieve all bookings with pagination (admin use).
-    """
+    """Retrieve all bookings with pagination (admin use)."""
     result = await session.execute(
         select(Booking).offset((page - 1) * page_size).limit(page_size).order_by(Booking.created_at.desc())
     )
     return result.scalars().all()
 
+
 async def find_overlapping(
     session: AsyncSession, room_id: int, check_in: date, check_out: date
 ) -> List[Booking]:
-    """
-    Find active bookings that overlap with a date range for a specific room.
-    """
+    """Find active bookings that overlap with a date range for a specific room."""
     result = await session.execute(
         select(Booking).where(
             and_(
@@ -65,28 +56,10 @@ async def find_overlapping(
     )
     return result.scalars().all()
 
+
 async def update_status(session: AsyncSession, booking_id: int, new_status: str) -> Optional[Booking]:
-    """
-    Update booking status.
-    """
+    """Update booking status."""
     stmt = update(Booking).where(Booking.id == booking_id).values(status=new_status).returning(Booking)
     result = await session.execute(stmt)
     await session.flush()
     return result.scalar_one_or_none()
-
-
-async def find_overlapping(room_id: int, check_in: date, check_out: date) -> list:
-    """
-    Find bookings that overlap with the requested date range.
-    TODO: Complex date-overlap SQL query
-    Used for availability checking before confirming a new booking.
-    """
-    pass
-
-
-async def update_status(booking_id: int, status: str) -> dict:
-    """
-    Update the status of a booking.
-    TODO: UPDATE bookings SET status = :status WHERE id = :booking_id
-    """
-    pass
