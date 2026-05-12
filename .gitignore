@@ -48,3 +48,8 @@ alembic.ini.local
 # Editor swap files
 *.swp
 *~
+
+# Claude Code / Ruflo plugin system (auto-generated)
+.agents/
+claude.md
+skills-lock.json
