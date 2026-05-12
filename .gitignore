@@ -1,37 +1,22 @@
 # Environments
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
 # Python
-venv/
-.venv/
-ENV/
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 .coverage
-htmlcov/
-dist/
-build/
 *.egg-info/
 
 # Node / Mobile App
 node_modules/
-mobile-app/node_modules/
-mobile-app/.expo/
-mobile-app/dist/
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # IDE / System
 .vscode/
 .idea/
 .DS_Store
-*.swp
-*.swo
 Thumbs.db
