@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -17,10 +16,12 @@ Thumbs.db
 !.vscode/extensions.json
 *.swp
 *.swo
+*~
 
 # Node / JavaScript / Frontend Apps
 node_modules/
 npm-debug.log
+npm-debug.log*
 yarn-error.log
 yarn-debug.log
 pnpm-debug.log
@@ -39,9 +40,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -56,6 +55,8 @@ wheels/
 *.egg
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 .tox/
 .mypy_cache/
@@ -74,6 +75,7 @@ db.sqlite3
 *.db
 *.sql
 web-app/assets/images
+alembic.ini.local
 
 # Logs
 levels/
@@ -83,6 +85,8 @@ logs/
 # Secrets / Config
 .env
 .env.*
+.env.local
+.env.*.local
 !.env.example
 secret.json
 secrets/
@@ -93,60 +97,9 @@ ios/build/
 android/app/build/
 android/.gradle/
 android/local.properties
-=======
-# Environments
-.env
-.env.local
-.env.*.local
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.coverage
-*.egg-info/
-
-# Node / Mobile App
-node_modules/
-npm-debug.log*
-
-# IDE / System
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Python virtual environments
-venv/
-.venv/
-env/
-
-# Test coverage reports
-htmlcov/
-.coverage.*
-coverage.xml
-
-# Build & distribution artifacts
-dist/
-build/
-
-# Logs
-*.log
-
-# SQLite (used in local testing)
-*.sqlite3
-*.db
-
-# Alembic local override
-alembic.ini.local
-
-# Editor swap files
-*.swp
-*~
 
 # Claude Code / Ruflo plugin system (auto-generated)
 .agents/
 claude.md
 skills-lock.json
->>>>>>> 98741905a3fafa312dcdd9bbaf43372905b11ee7
+
