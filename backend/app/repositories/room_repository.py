@@ -40,6 +40,12 @@ async def find_by_id(session: AsyncSession, room_id: int) -> Optional[Room]:
     return result.scalar_one_or_none()
 
 
+async def find_by_id_for_update(session: AsyncSession, room_id: int) -> Optional[Room]:
+    """Find a single room by ID and lock it for update to prevent race conditions."""
+    result = await session.execute(select(Room).where(Room.id == room_id).with_for_update())
+    return result.scalar_one_or_none()
+
+
 async def create(session: AsyncSession, room_data: dict) -> Room:
     """Insert a new room record."""
     room = Room(**room_data)
