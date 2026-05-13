@@ -1,13 +1,104 @@
-__pycache__/
-*.pyc
-*.pyo
-.env
-.venv/
-venv/
-*.egg-info/
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs / Editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Node / JavaScript / Frontend Apps
+node_modules/
+npm-debug.log
+npm-debug.log*
+yarn-error.log
+yarn-debug.log
+pnpm-debug.log
 dist/
 build/
+coverage/
+.expo/
+.next/
+web-build/
+out/
+.vercel
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 .pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
 .mypy_cache/
-node_modules/
-.DS_Store
+
+# Environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Databases / Data
+*.sqlite
+*.sqlite3
+db.sqlite3
+*.db
+*.sql
+web-app/assets/images
+alembic.ini.local
+
+# Logs
+levels/
+*.log
+logs/
+
+# Secrets / Config
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+secret.json
+secrets/
+
+# Mobile App specifics (React Native / Expo / Bare Workflow)
+ios/Pods/
+ios/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# Claude Code / Ruflo plugin system (auto-generated)
+.agents/
+claude.md
+skills-lock.json
