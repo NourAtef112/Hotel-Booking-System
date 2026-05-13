@@ -15,22 +15,18 @@ async def find_all(
     page: int = 1,
     page_size: int = 10,
 ) -> dict:
-    """
-    Retrieve a paginated list of rooms with optional filters.
-    """
+    """Retrieve a paginated list of rooms with optional filters."""
     query = select(Room)
-    
+
     if status is not None:
         query = query.where(Room.status == status)
     if room_type is not None:
         query = query.where(Room.room_type == room_type)
 
-    # Get total count for pagination
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await session.execute(count_query)
     total = total_result.scalar_one()
 
-    # Apply pagination
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await session.execute(query)
     rooms = result.scalars().all()
@@ -39,19 +35,19 @@ async def find_all(
 
 
 async def find_by_id(session: AsyncSession, room_id: int) -> Optional[Room]:
-    """
-    Find a single room by ID.
-    """
+    """Find a single room by ID."""
     result = await session.execute(select(Room).where(Room.id == room_id))
     return result.scalar_one_or_none()
 
+
 async def create(session: AsyncSession, room_data: dict) -> Room:
-    """Create a new room."""
+    """Insert a new room record."""
     room = Room(**room_data)
     session.add(room)
     await session.flush()
     await session.refresh(room)
     return room
+
 
 async def update_room(session: AsyncSession, room_id: int, room_data: dict) -> Optional[Room]:
     """Update room details."""
@@ -61,17 +57,16 @@ async def update_room(session: AsyncSession, room_id: int, room_data: dict) -> O
     return result.scalar_one_or_none()
 
 
-async def create(room_data: dict) -> dict:
-    """
-    Insert a new room record.
-    TODO: INSERT INTO rooms (...) VALUES (...)
-    """
-    pass
+async def delete_room(session: AsyncSession, room_id: int) -> None:
+    """Soft-delete a room by setting is_active to False."""
+    stmt = update(Room).where(Room.id == room_id).values(is_active=False)
+    await session.execute(stmt)
+    await session.flush()
 
 
-async def update(room_id: int, update_data: dict) -> dict:
-    """
-    Update room fields.
-    TODO: UPDATE rooms SET ... WHERE id = :room_id
-    """
-    pass
+async def update_room_status(session: AsyncSession, room_id: int, new_status: str) -> Optional[Room]:
+    """Update room availability status."""
+    stmt = update(Room).where(Room.id == room_id).values(status=new_status).returning(Room)
+    result = await session.execute(stmt)
+    await session.flush()
+    return result.scalar_one_or_none()

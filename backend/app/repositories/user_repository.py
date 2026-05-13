@@ -1,7 +1,7 @@
 """
 user_repository.py — Data access layer for User entities.
 """
-from typing import Optional
+from typing import List, Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
@@ -51,3 +51,15 @@ async def delete_user(session: AsyncSession, user_id: int) -> None:
     stmt = update(User).where(User.id == user_id).values(is_active=False)
     await session.execute(stmt)
     await session.flush()
+
+
+async def get_all_users(session: AsyncSession, page: int = 1, page_size: int = 20) -> List[User]:
+    """Retrieve all active users with pagination (admin use)."""
+    result = await session.execute(
+        select(User)
+        .where(User.is_active == True)
+        .order_by(User.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return result.scalars().all()
