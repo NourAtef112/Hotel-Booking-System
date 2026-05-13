@@ -35,3 +35,38 @@ yarn-error.log*
 *.swp
 *.swo
 Thumbs.db
+
+# ── Mobile app — environment & secrets ────────────────────────────────────────
+mobile-app/.env
+mobile-app/.env.local
+mobile-app/.env.development
+mobile-app/.env.staging
+mobile-app/.env.production
+
+# ── Expo generated ────────────────────────────────────────────────────────────
+mobile-app/.expo/
+mobile-app/dist/
+mobile-app/web-build/
+mobile-app/expo-env.d.ts
+
+# ── Node ──────────────────────────────────────────────────────────────────────
+mobile-app/node_modules/
+
+# ── Native build artefacts ────────────────────────────────────────────────────
+mobile-app/android/
+mobile-app/ios/
+mobile-app/*.jks
+mobile-app/*.p8
+mobile-app/*.p12
+mobile-app/*.mobileprovision
+mobile-app/*.orig.*
+
+# ── OS noise ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
