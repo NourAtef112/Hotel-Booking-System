@@ -2,18 +2,45 @@
 deps.py — FastAPI dependencies.
 """
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from jose import JWTError
 from app.db.session import get_db
+from app.core import security
+from app.repositories import user_repository
 
-class CurrentUser:
-    def __init__(self, id: int, role: str = "guest"):
-        self.id = id
-        self.role = role
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
-async def get_current_user() -> CurrentUser:
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_db)
+):
     """
-    Mock dependency to simulate an authenticated user.
-    TODO: Implement JWT decoding using app.core.security.decode_access_token
+    Decode JWT token and return the authenticated user.
     """
-    return CurrentUser(id=1, role="guest")
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    payload = security.decode_access_token(token)
+    if payload is None:
+        raise credentials_exception
+        
+    user_id_str: str = payload.get("sub")
+    if user_id_str is None:
+        raise credentials_exception
+        
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise credentials_exception
+        
+    user = await user_repository.get_by_id(session, user_id)
+    if user is None:
+        raise credentials_exception
+        
+    return user
+

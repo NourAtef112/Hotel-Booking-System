@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.booking_schemas import BookingRequest, BookingResponse, BookingListResponse
 from app.services import booking_service
-from app.api.deps import get_db, get_current_user, CurrentUser
+from app.api.deps import get_db, get_current_user
+from app.models.user import User
 
 router = APIRouter()
 
@@ -15,7 +16,7 @@ router = APIRouter()
 async def create_booking(
     payload: BookingRequest,
     session: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     POST /bookings
@@ -27,7 +28,7 @@ async def create_booking(
 @router.get("/", response_model=BookingListResponse)
 async def list_my_bookings(
     session: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     GET /bookings
@@ -41,7 +42,7 @@ async def list_my_bookings(
 async def get_booking(
     booking_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     GET /bookings/{booking_id}
@@ -54,7 +55,7 @@ async def get_booking(
 async def cancel_booking(
     booking_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     DELETE /bookings/{booking_id}

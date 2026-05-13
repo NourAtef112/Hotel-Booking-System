@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from app.main import app
-from app.api.deps import get_db, get_current_user, CurrentUser
+from app.api.deps import get_db, get_current_user
 from app.db.base import Base
 from app.models.room import Room
 from app.models.booking import Booking
@@ -41,7 +41,7 @@ async def async_client(setup_test_db):
             yield session
 
     def override_get_current_user():
-        return CurrentUser(id=1, role="guest")
+        return User(id=1, name="Integration Test User", email="test@test.com", role="guest")
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
