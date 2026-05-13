@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -92,3 +93,60 @@ ios/build/
 android/app/build/
 android/.gradle/
 android/local.properties
+=======
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+*.egg-info/
+
+# Node / Mobile App
+node_modules/
+npm-debug.log*
+
+# IDE / System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python virtual environments
+venv/
+.venv/
+env/
+
+# Test coverage reports
+htmlcov/
+.coverage.*
+coverage.xml
+
+# Build & distribution artifacts
+dist/
+build/
+
+# Logs
+*.log
+
+# SQLite (used in local testing)
+*.sqlite3
+*.db
+
+# Alembic local override
+alembic.ini.local
+
+# Editor swap files
+*.swp
+*~
+
+# Claude Code / Ruflo plugin system (auto-generated)
+.agents/
+claude.md
+skills-lock.json
+>>>>>>> 98741905a3fafa312dcdd9bbaf43372905b11ee7
