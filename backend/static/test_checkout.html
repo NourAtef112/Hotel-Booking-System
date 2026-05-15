@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>E-JUST Guest House — Payment Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .container { max-width: 560px; width: 100%; }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    h1 { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+    label { display: block; font-size: 13px; font-weight: 500;
+            color: #444; margin-bottom: 6px; margin-top: 14px; }
+    input {
+      width: 100%; padding: 10px 14px;
+      border: 1.5px solid #e0e0e0; border-radius: 8px;
+      font-size: 14px; color: #111;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: #2563eb; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    button {
+      width: 100%; margin-top: 24px;
+      padding: 13px;
+      background: #2563eb; color: white;
+      border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #93c5fd; cursor: not-allowed; }
+    .spinner {
+      display: none; text-align: center;
+      padding: 20px; color: #666; font-size: 14px;
+    }
+    .spinner.show { display: block; }
+    .error-box {
+      display: none; margin-top: 16px;
+      padding: 14px; background: #fef2f2;
+      border: 1px solid #fecaca; border-radius: 10px;
+      color: #dc2626; font-size: 13px;
+    }
+    .error-box.show { display: block; }
+    .iframe-container {
+      display: none; margin-top: 20px;
+    }
+    .iframe-container.show { display: block; }
+    .iframe-header {
+      background: #1e3a8a; color: white;
+      padding: 12px 16px; border-radius: 10px 10px 0 0;
+      font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; gap: 8px;
+    }
+    iframe {
+      width: 100%; height: 650px;
+      border: 2px solid #e0e0e0;
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+    }
+    .test-cards {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .test-cards h3 {
+      font-size: 14px; font-weight: 600;
+      color: #1e3a8a; margin-bottom: 12px;
+    }
+    .card-row {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 8px 0;
+      border-bottom: 1px solid #dbeafe;
+      font-size: 13px;
+    }
+    .card-row:last-child { border-bottom: none; }
+    .card-number { font-family: monospace; font-weight: 600; color: #1e40af; }
+    .badge {
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge.success { background: #dcfce7; color: #166534; }
+    .badge.fail    { background: #fee2e2; color: #991b1b; }
+    .badge.threeds { background: #fef9c3; color: #854d0e; }
+    .log-box {
+      background: #111; color: #22c55e;
+      font-family: monospace; font-size: 12px;
+      padding: 16px; border-radius: 10px;
+      min-height: 100px; max-height: 200px;
+      overflow-y: auto; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header card -->
+  <div class="card">
+    <h1>🏨 E-JUST Guest House</h1>
+    <p class="subtitle">Paymob Payment — End-to-End Test Page</p>
+
+    <label>First Name</label>
+    <input id="firstName" value="Moamen" />
+
+    <label>Last Name</label>
+    <input id="lastName" value="Fouad" />
+
+    <label>Email</label>
+    <input id="email" type="email" value="moamen@ejust.edu.eg" />
+
+    <label>Phone</label>
+    <input id="phone" value="+201288277193" />
+
+    <div class="row">
+      <div>
+        <label>Booking ID</label>
+        <input id="bookingId" type="number" value="1" />
+      </div>
+      <div>
+        <label>Amount (EGP)</label>
+        <input id="amountEgp" type="number" value="250" />
+      </div>
+    </div>
+
+    <button id="payBtn" onclick="startCheckout()">
+      🔐 Proceed to Payment
+    </button>
+
+    <div class="spinner" id="spinner">
+      ⏳ Connecting to Paymob...
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- Paymob iframe -->
+  <div class="iframe-container" id="iframeContainer">
+    <div class="iframe-header">
+      🔒 Paymob Secure Checkout — Test Mode
+    </div>
+    <iframe id="paymentFrame" title="Paymob Secure Checkout"
+            allow="payment" src=""></iframe>
+  </div>
+
+  <!-- Test cards reference -->
+  <div class="card test-cards">
+    <h3>📋 Paymob Test Cards</h3>
+    <div class="card-row">
+      <div>
+        <div class="card-number">4987654321098769</div>
+        <div style="color:#666;font-size:12px">Any future expiry · CVV: 123 · OTP: 123456</div>
+      </div>
+      <span class="badge success">✅ Success</span>
+    </div>
+    <div class="card-row">
+      <div>
+        <div class="card-number">4111111111111111</div>
+        <div style="color:#666;font-size:12px">Any future expiry · CVV: 123</div>
+      </div>
+      <span class="badge fail">❌ Declined</span>
+    </div>
+    <div class="card-row">
+      <div>
+        <div class="card-number">4000000000000002</div>
+        <div style="color:#666;font-size:12px">Any future expiry · CVV: 123 · OTP: 123456</div>
+      </div>
+      <span class="badge threeds">🔐 3DS</span>
+    </div>
+  </div>
+
+  <!-- Live log -->
+  <div class="card">
+    <h3 style="font-size:14px;font-weight:600;color:#111;margin-bottom:12px">
+      📡 Request Log
+    </h3>
+    <div class="log-box" id="logBox">Waiting for checkout request...</div>
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = 'http://localhost:8000';
+
+  function log(msg) {
+    const box = document.getElementById('logBox');
+    const time = new Date().toLocaleTimeString();
+    box.textContent += `\n[${time}] ${msg}`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function startCheckout() {
+    const btn      = document.getElementById('payBtn');
+    const spinner  = document.getElementById('spinner');
+    const errorBox = document.getElementById('errorBox');
+    const iframeC  = document.getElementById('iframeContainer');
+    const frame    = document.getElementById('paymentFrame');
+
+    // reset state
+    btn.disabled = true;
+    spinner.classList.add('show');
+    errorBox.classList.remove('show');
+    iframeC.classList.remove('show');
+
+    const amountEgp = parseFloat(document.getElementById('amountEgp').value);
+    const payload = {
+      booking_id:       parseInt(document.getElementById('bookingId').value),
+      amount_cents:     Math.round(amountEgp * 100),
+      currency:         'EGP',
+      guest_first_name: document.getElementById('firstName').value,
+      guest_last_name:  document.getElementById('lastName').value,
+      guest_email:      document.getElementById('email').value,
+      guest_phone:      document.getElementById('phone').value,
+    };
+
+    log(`POST ${API_BASE}/api/payments/checkout`);
+    log(`Payload: ${JSON.stringify(payload, null, 2)}`);
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/payments/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.detail?.message || JSON.stringify(data));
+      }
+
+      log(`✅ Got payment_url`);
+      log(`client_secret: ${data.client_secret.substring(0, 20)}...`);
+      log(`Loading Paymob iframe...`);
+
+      frame.src = data.payment_url;
+      iframeC.classList.add('show');
+
+    } catch (err) {
+      log(`❌ Error: ${err.message}`);
+      errorBox.textContent = `Payment gateway error: ${err.message}`;
+      errorBox.classList.add('show');
+    } finally {
+      spinner.classList.remove('show');
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
