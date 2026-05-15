@@ -1,13 +1,12 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.mocks.users import MOCK_USERS
+from app.api.deps import get_db
 from app.schemas.auth import LoginRequest, RegisterRequest, RegisterResponse, TokenResponse
 from app.schemas.common import ErrorResponse
+from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-_PLACEHOLDER_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_payload.mock_signature"
-_TOKEN_EXPIRES_IN = 86400  # 24 hours in seconds
 
 
 @router.post(
@@ -19,13 +18,8 @@ _TOKEN_EXPIRES_IN = 86400  # 24 hours in seconds
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )
-async def register(body: RegisterRequest) -> RegisterResponse:
-    return RegisterResponse(
-        user=MOCK_USERS[0],
-        access_token=_PLACEHOLDER_TOKEN,
-        token_type="bearer",
-        expires_in=_TOKEN_EXPIRES_IN,
-    )
+async def register(body: RegisterRequest, session: AsyncSession = Depends(get_db)) -> RegisterResponse:
+    return await auth_service.register_user(session, body)
 
 
 @router.post(
@@ -37,9 +31,6 @@ async def register(body: RegisterRequest) -> RegisterResponse:
         422: {"model": ErrorResponse, "description": "Validation error"},
     },
 )
-async def login(body: LoginRequest) -> TokenResponse:
-    return TokenResponse(
-        access_token=_PLACEHOLDER_TOKEN,
-        token_type="bearer",
-        expires_in=_TOKEN_EXPIRES_IN,
-    )
+async def login(body: LoginRequest, session: AsyncSession = Depends(get_db)) -> TokenResponse:
+    return await auth_service.authenticate_user(session, body)
+
