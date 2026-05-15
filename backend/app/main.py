@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
+from app.api.v1.ws_availability import router as ws_router
 from app.core.errors import generic_exception_handler, validation_exception_handler
 
 app = FastAPI(
@@ -24,6 +25,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(ws_router)
 
 
 @app.get("/health", tags=["health"])
