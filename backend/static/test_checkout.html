@@ -105,15 +105,141 @@
       min-height: 100px; max-height: 200px;
       overflow-y: auto; white-space: pre-wrap;
     }
+
+    /* ── Demo Mode toggle ── */
+    .demo-banner {
+      background: #fefce8;
+      border: 1.5px solid #fde047;
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .demo-banner-text { font-size: 13px; color: #713f12; }
+    .demo-banner-text strong { display: block; font-size: 14px; color: #422006; margin-bottom: 2px; }
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .toggle-label { font-size: 12px; font-weight: 600; color: #78350f; }
+    .toggle {
+      position: relative; width: 44px; height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: #d1d5db; border-radius: 24px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: ""; position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: white; border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: #f59e0b; }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* ── Demo fake iframe ── */
+    .demo-frame {
+      display: none;
+      margin-top: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .demo-frame.show { display: block; }
+    .demo-frame-header {
+      background: #1e3a8a; color: white;
+      padding: 12px 16px;
+      font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .demo-frame-body { background: white; padding: 28px; }
+    .demo-frame-body h3 {
+      font-size: 15px; font-weight: 600; color: #111;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 6px;
+    }
+    .demo-input-group { margin-bottom: 14px; }
+    .demo-input-group label {
+      font-size: 12px; font-weight: 600; color: #555;
+      margin-bottom: 5px; margin-top: 0;
+    }
+    .demo-input-group input {
+      font-family: monospace; font-size: 14px;
+      background: #f9fafb;
+    }
+    .demo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .demo-pay-btn {
+      margin-top: 20px;
+      background: #16a34a;
+    }
+    .demo-pay-btn:hover { background: #15803d; }
+    .demo-pay-btn:disabled { background: #86efac; }
+    .paymob-logo {
+      font-size: 11px; color: #6b7280; text-align: center;
+      margin-top: 16px; display: flex; align-items: center;
+      justify-content: center; gap: 4px;
+    }
+
+    /* ── Success screen ── */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 32px 20px;
+    }
+    .success-screen.show { display: block; }
+    .success-icon {
+      width: 72px; height: 72px;
+      background: #dcfce7; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 36px;
+    }
+    .success-screen h2 { font-size: 22px; font-weight: 700; color: #15803d; margin-bottom: 8px; }
+    .success-screen p { font-size: 14px; color: #555; margin-bottom: 6px; }
+    .txn-id {
+      font-family: monospace; font-size: 12px;
+      background: #f3f4f6; color: #374151;
+      padding: 8px 14px; border-radius: 8px;
+      display: inline-block; margin-top: 10px;
+    }
+    .success-actions { margin-top: 24px; display: flex; gap: 10px; }
+    .btn-outline {
+      flex: 1; padding: 11px;
+      background: white; color: #2563eb;
+      border: 1.5px solid #2563eb;
+      border-radius: 10px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+      margin-top: 0;
+    }
+    .btn-outline:hover { background: #eff6ff; }
   </style>
 </head>
 <body>
 <div class="container">
 
+  <!-- Demo mode banner -->
+  <div class="demo-banner">
+    <div class="demo-banner-text">
+      <strong>Demo Mode Available</strong>
+      Live Paymob API requires account verification. Enable demo mode to simulate the full checkout flow.
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label">DEMO</span>
+      <label class="toggle">
+        <input type="checkbox" id="demoToggle" onchange="onDemoToggle()" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
   <!-- Header card -->
   <div class="card">
-    <h1>🏨 E-JUST Guest House</h1>
-    <p class="subtitle">Paymob Payment — End-to-End Test Page</p>
+    <h1>E-JUST Guest House</h1>
+    <p class="subtitle" id="modeSubtitle">Paymob Payment — End-to-End Test Page</p>
 
     <label>First Name</label>
     <input id="firstName" value="Moamen" />
@@ -139,55 +265,109 @@
     </div>
 
     <button id="payBtn" onclick="startCheckout()">
-      🔐 Proceed to Payment
+      Proceed to Payment
     </button>
 
     <div class="spinner" id="spinner">
-      ⏳ Connecting to Paymob...
+      Connecting to Paymob...
     </div>
 
     <div class="error-box" id="errorBox"></div>
   </div>
 
-  <!-- Paymob iframe -->
+  <!-- Real Paymob iframe (live mode) -->
   <div class="iframe-container" id="iframeContainer">
     <div class="iframe-header">
-      🔒 Paymob Secure Checkout — Test Mode
+      Paymob Secure Checkout — Test Mode
     </div>
     <iframe id="paymentFrame" title="Paymob Secure Checkout"
             allow="payment" src=""></iframe>
   </div>
 
+  <!-- Demo fake checkout iframe -->
+  <div class="demo-frame" id="demoFrame">
+    <div class="demo-frame-header">
+      Paymob Secure Checkout — Demo Mode
+    </div>
+    <div class="demo-frame-body">
+
+      <!-- Card form -->
+      <div id="demoCardForm">
+        <h3>Card Payment</h3>
+        <div class="demo-input-group">
+          <label>Card Number</label>
+          <input id="demoCardNumber" value="4987654321098769" maxlength="19" />
+        </div>
+        <div class="demo-row">
+          <div class="demo-input-group">
+            <label>Expiry Date</label>
+            <input id="demoExpiry" value="12/28" maxlength="5" />
+          </div>
+          <div class="demo-input-group">
+            <label>CVV</label>
+            <input id="demoCvv" value="123" maxlength="3" type="password" />
+          </div>
+        </div>
+        <div class="demo-input-group">
+          <label>Cardholder Name</label>
+          <input id="demoCardName" value="Moamen Fouad" />
+        </div>
+        <button class="demo-pay-btn" id="demoPayBtn" onclick="demoPayNow()">
+          Pay Now
+        </button>
+        <div class="paymob-logo">
+          Secured by Paymob
+        </div>
+      </div>
+
+      <!-- Success screen -->
+      <div class="success-screen" id="demoSuccess">
+        <div class="success-icon">&#10003;</div>
+        <h2>Payment Successful!</h2>
+        <p>Your booking has been confirmed.</p>
+        <p style="color:#888;font-size:13px">A confirmation will be sent to <span id="successEmail"></span></p>
+        <div class="txn-id" id="txnId"></div>
+        <div class="success-actions">
+          <button class="btn-outline" onclick="resetDemo()">New Booking</button>
+          <button style="flex:1;margin-top:0;padding:11px;font-size:14px" onclick="resetDemo()">
+            Back to Home
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Test cards reference -->
   <div class="card test-cards">
-    <h3>📋 Paymob Test Cards</h3>
+    <h3>Paymob Test Cards</h3>
     <div class="card-row">
       <div>
         <div class="card-number">4987654321098769</div>
         <div style="color:#666;font-size:12px">Any future expiry · CVV: 123 · OTP: 123456</div>
       </div>
-      <span class="badge success">✅ Success</span>
+      <span class="badge success">Success</span>
     </div>
     <div class="card-row">
       <div>
         <div class="card-number">4111111111111111</div>
         <div style="color:#666;font-size:12px">Any future expiry · CVV: 123</div>
       </div>
-      <span class="badge fail">❌ Declined</span>
+      <span class="badge fail">Declined</span>
     </div>
     <div class="card-row">
       <div>
         <div class="card-number">4000000000000002</div>
         <div style="color:#666;font-size:12px">Any future expiry · CVV: 123 · OTP: 123456</div>
       </div>
-      <span class="badge threeds">🔐 3DS</span>
+      <span class="badge threeds">3DS</span>
     </div>
   </div>
 
   <!-- Live log -->
   <div class="card">
     <h3 style="font-size:14px;font-weight:600;color:#111;margin-bottom:12px">
-      📡 Request Log
+      Request Log
     </h3>
     <div class="log-box" id="logBox">Waiting for checkout request...</div>
   </div>
@@ -196,6 +376,7 @@
 
 <script>
   const API_BASE = 'http://localhost:8000';
+  let demoMode = false;
 
   function log(msg) {
     const box = document.getElementById('logBox');
@@ -204,14 +385,45 @@
     box.scrollTop = box.scrollHeight;
   }
 
+  function onDemoToggle() {
+    demoMode = document.getElementById('demoToggle').checked;
+    const subtitle = document.getElementById('modeSubtitle');
+    const payBtn   = document.getElementById('payBtn');
+    if (demoMode) {
+      subtitle.textContent = 'Demo Mode — Simulated Paymob Checkout';
+      subtitle.style.color = '#b45309';
+      payBtn.textContent   = 'Proceed to Payment (Demo)';
+      payBtn.style.background = '#d97706';
+      log('[DEMO MODE ON] Checkout will be fully simulated client-side.');
+    } else {
+      subtitle.textContent    = 'Paymob Payment — End-to-End Test Page';
+      subtitle.style.color    = '';
+      payBtn.textContent      = 'Proceed to Payment';
+      payBtn.style.background = '';
+      log('[DEMO MODE OFF] Checkout will hit the real /api/payments/checkout endpoint.');
+    }
+    // hide any open frames
+    document.getElementById('iframeContainer').classList.remove('show');
+    document.getElementById('demoFrame').classList.remove('show');
+    document.getElementById('errorBox').classList.remove('show');
+  }
+
   async function startCheckout() {
+    if (demoMode) {
+      runDemoCheckout();
+    } else {
+      runLiveCheckout();
+    }
+  }
+
+  // ── Live checkout ─────────────────────────────────────────────────────────────
+  async function runLiveCheckout() {
     const btn      = document.getElementById('payBtn');
     const spinner  = document.getElementById('spinner');
     const errorBox = document.getElementById('errorBox');
     const iframeC  = document.getElementById('iframeContainer');
     const frame    = document.getElementById('paymentFrame');
 
-    // reset state
     btn.disabled = true;
     spinner.classList.add('show');
     errorBox.classList.remove('show');
@@ -244,7 +456,7 @@
         throw new Error(data.detail?.message || JSON.stringify(data));
       }
 
-      log(`✅ Got payment_url`);
+      log(`Got payment_url`);
       log(`client_secret: ${data.client_secret.substring(0, 20)}...`);
       log(`Loading Paymob iframe...`);
 
@@ -252,13 +464,80 @@
       iframeC.classList.add('show');
 
     } catch (err) {
-      log(`❌ Error: ${err.message}`);
+      log(`Error: ${err.message}`);
       errorBox.textContent = `Payment gateway error: ${err.message}`;
       errorBox.classList.add('show');
     } finally {
       spinner.classList.remove('show');
       btn.disabled = false;
     }
+  }
+
+  // ── Demo checkout ─────────────────────────────────────────────────────────────
+  function runDemoCheckout() {
+    const btn      = document.getElementById('payBtn');
+    const spinner  = document.getElementById('spinner');
+    const demoFrame = document.getElementById('demoFrame');
+
+    btn.disabled = true;
+    spinner.classList.add('show');
+    demoFrame.classList.remove('show');
+    document.getElementById('demoCardForm').style.display = 'block';
+    document.getElementById('demoSuccess').classList.remove('show');
+
+    const amountEgp = parseFloat(document.getElementById('amountEgp').value);
+    const bookingId = parseInt(document.getElementById('bookingId').value);
+
+    log(`[DEMO] Simulating POST /api/payments/checkout`);
+    log(`[DEMO] booking_id=${bookingId}, amount=${amountEgp} EGP`);
+
+    setTimeout(() => {
+      spinner.classList.remove('show');
+      btn.disabled = false;
+
+      const fakeClientSecret = 'cs_demo_' + Math.random().toString(36).slice(2, 18);
+      log(`[DEMO] Got simulated client_secret: ${fakeClientSecret.slice(0, 20)}...`);
+      log(`[DEMO] Rendering demo checkout iframe...`);
+
+      demoFrame.classList.add('show');
+      demoFrame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 1500);
+  }
+
+  function demoPayNow() {
+    const btn = document.getElementById('demoPayBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    const cardNum = document.getElementById('demoCardNumber').value.replace(/\s/g, '');
+    log(`[DEMO] Card submitted: ...${cardNum.slice(-4)}`);
+    log(`[DEMO] Contacting payment processor...`);
+
+    setTimeout(() => {
+      const txnId = 'TXN-DEMO-' + Date.now();
+      const email  = document.getElementById('email').value;
+      const amount = document.getElementById('amountEgp').value;
+
+      log(`[DEMO] Payment authorised!`);
+      log(`[DEMO] Transaction ID: ${txnId}`);
+      log(`[DEMO] Booking status → confirmed`);
+
+      document.getElementById('successEmail').textContent = email;
+      document.getElementById('txnId').textContent =
+        `Transaction ID: ${txnId}  |  Amount: ${amount} EGP`;
+      document.getElementById('demoCardForm').style.display = 'none';
+      document.getElementById('demoSuccess').classList.add('show');
+
+      btn.disabled = false;
+      btn.textContent = 'Pay Now';
+    }, 2000);
+  }
+
+  function resetDemo() {
+    document.getElementById('demoFrame').classList.remove('show');
+    document.getElementById('demoSuccess').classList.remove('show');
+    document.getElementById('demoCardForm').style.display = 'block';
+    log(`[DEMO] Reset — ready for new booking.`);
   }
 </script>
 </body>

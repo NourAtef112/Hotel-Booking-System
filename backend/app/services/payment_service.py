@@ -39,14 +39,11 @@ class PaymobService:
         el secret key betro7 fe el Authorization header bass.
         el frontend mesh shayef el secret key 7aga.
         """
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                f"{self._base}/v1/intention/",
-                headers={
-                    "Authorization": f"Token {self._secret}",
-                    "Content-Type": "application/json",
-                },
-                json={
+        _headers = {
+            "Authorization": f"Token {self._secret}",
+            "Content-Type": "application/json",
+        }
+        _body = {
                     "amount": payload.amount_cents,
                     "currency": payload.currency,
                     "payment_methods": [int(self._int_id)],
@@ -75,7 +72,12 @@ class PaymobService:
                     "extras": {"booking_id": payload.booking_id},
                     "notification_url": f"{self._our_url}/api/payments/webhook",
                     "redirection_url":  f"{self._our_url}/booking/confirmation",
-                },
+        }
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{self._base}/v1/intention/",
+                headers=_headers,
+                json=_body,
             )
             resp.raise_for_status()
             data = resp.json()
