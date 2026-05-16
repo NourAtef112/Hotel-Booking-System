@@ -1,64 +1,141 @@
-# 🏛️ University Guest Housing Booking System
+# 🏛️ E-JUST Guest Housing Booking System
 
-> Architecture skeleton — Software Engineering course project
+> CSE323 Software Engineering — Team Project | E-JUST, 2026
 
-## Project Overview
+A web-based platform that digitizes E-JUST's guest housing reservation process.
+Previously managed via phone calls — now a fully online booking system for students, staff, and external guests.
 
-A full-stack University Guest Housing Booking System that allows students, staff, and external guests to browse, book, and manage guest housing rooms at a university campus.
+---
 
-## Tech Stack
+## 📌 Project Status
+
+| Phase | Focus | Status |
+|---|---|---|
+| Phase 1 — Requirements | Actor classification, traceability, edge cases | ✅ Done |
+| Phase 2 — Design & Specification | Gherkin, UML, API contracts | ✅ Done |
+| Phase 3 — TDD Implementation | Vertical slice, BookingService, PaymobService | ✅ Done |
+| Phase 4 — Validation & Pipeline | Integration tests, Playwright E2E, real DB | 🔄 In Progress |
+
+---
+
+## 👥 Team
+
+| Name | Student ID | Role |
+|---|---|---|
+| Moamen Ahmed Fouad | 120230151 | Architecture + Backend Lead |
+| Yassin Mahmoud Alam | 120230122 | Frontend (React Web) |
+| Nour Atef | 120230032 | Testing + Documentation + API Contracts |
+| Mohammed ElGendy | 120230154 | Contributor |
+| Joudi Sameh | 120230148 | Contributor |
+
+---
+
+## 🧱 Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Mobile | React Native (Expo) + TypeScript |
-| Backend | Python + FastAPI |
-| Database | PostgreSQL |
-| Testing | pytest + Playwright |
+|---|---|
+| Frontend | React + TypeScript + Tailwind CSS (Web only) |
+| Backend | Python 3.11 + FastAPI |
+| Database | PostgreSQL + SQLAlchemy 2.x (async) |
+| Auth | JWT (python-jose) + bcrypt (passlib) |
+| Validation | Pydantic v2 |
+| Unit Tests | pytest + pytest-asyncio + pytest-respx |
+| E2E Tests | Playwright + Page Object Model |
+| Payment | Paymob (Unified Checkout / Intention API) |
 
-## Repository Structure
+---
+
+## 🗂️ Repository Structure
 
 ```
 university-guest-housing/
-├── mobile-app/        # React Native Expo mobile application
-├── backend/           # FastAPI Python backend
-├── docs/              # Requirements, design, validation docs
-├── tests/             # pytest test stubs (failing-first)
-├── gherkin/           # BDD feature scenarios
-├── api-contracts/     # API request/response schemas
+├── backend/               # FastAPI Python backend
+│   ├── app/
+│   │   ├── api/v1/        # Route handlers
+│   │   ├── core/          # Config, DB connection, exceptions
+│   │   ├── models/        # SQLAlchemy models
+│   │   ├── repositories/  # IBookingRepository + SQL implementation
+│   │   ├── schemas/       # Pydantic v2 DTOs
+│   │   └── services/      # BookingService, AuthService, PaymobService
+│   ├── tests/unit/        # 29 unit tests (all passing)
+│   ├── alembic/           # DB migrations
+│   └── docs/              # Architecture + payment docs
+├── docs/                  # Requirements, design, validation docs
+├── gherkin/               # BDD feature scenarios
+├── api-contracts/         # API request/response schemas
 └── README.md
 ```
 
-## Documentation
+---
 
-Detailed technical documentation is available in the `docs/` directory:
-- [Architecture Overview](docs/architecture.md) - System design and data flow.
-- [Requirements](docs/requirements.md) - Functional and non-functional requirements.
-- [Design Document](docs/design.md) - High-level design decisions.
+## 🚀 Quick Start
 
-## Engineering Lifecycle
+### Prerequisites
+- Python 3.11+
+- PostgreSQL running locally
+- Node 18+ (for frontend)
 
-This project follows the full Software Engineering cycle:
-
-1. **Requirements** → `docs/requirements.md`
-2. **Design** → `docs/design.md`
-3. **Architecture** → `docs/architecture.md`
-4. **Implementation** → `backend/` + `mobile-app/`
-5. **Validation** → `tests/` + `gherkin/` + `docs/validation.md`
-
-## Quick Start
+### Backend
 
 ```bash
-# Backend (Python 3.11+)
 cd backend
+cp ../.env.example .env
+# Fill in DATABASE_URL and SECRET_KEY in .env
 pip install -r requirements.txt
-uvicorn main:app --reload
-
-# Mobile (Node 18+)
-cd mobile-app
-npm install
-npx expo start
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
 ```
 
-## Status
+### Frontend (separate repo / Figma handoff)
+The frontend is a React + TypeScript + Tailwind CSS web app.
+Currently in design handoff — Figma/Framer designs being implemented by Yassin.
 
-> ⚠️ **Architecture Phase** — Stubs and contracts only. No business logic implemented.
+### Run tests
+
+```bash
+cd backend
+pytest tests/unit/ -v
+# Expected: 29 green
+```
+
+---
+
+## 🔑 API Overview
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | /auth/register | No | Register new user |
+| POST | /auth/login | No | Login, returns JWT |
+| GET | /rooms | Yes | List all rooms |
+| GET | /rooms/{id} | Yes | Room detail |
+| POST | /bookings | Yes | Create booking |
+| GET | /bookings/me | Yes | My bookings |
+| GET | /admin/bookings | Admin | All bookings |
+| PATCH | /admin/bookings/{id} | Admin | Update booking status |
+| POST | /api/payments/checkout | Yes | Initiate Paymob payment |
+| POST | /api/payments/webhook | Public | Paymob webhook handler |
+| WS | /ws/availability | No | Live room availability stream |
+
+Full Swagger docs available at: http://localhost:8000/docs
+
+---
+
+## 🏠 Seeded Rooms
+
+| Room | Type | Price/night |
+|---|---|---|
+| GH-101 | Single | 250 EGP |
+| GH-102 | Single | 250 EGP |
+| GH-201 | Double | 400 EGP |
+| GH-202 | Suite | 600 EGP |
+| GH-301 | VIP Suite | 900 EGP |
+
+Default admin: admin@ejust.edu.eg / Admin123!
+
+---
+
+## ⚠️ Known Limitations
+
+- Paymob live payments blocked pending account KYC verification — demo mode used for submission
+- WebSocket availability stream has no JWT auth guard yet (Phase 4 TODO)
+- Frontend implementation pending Figma design handoff
