@@ -13,6 +13,7 @@ Security:
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
@@ -74,7 +75,13 @@ async def get_all_bookings(
     # We surface the related user's full_name as guest_name when available.
     results = []
     for b in bookings:
-        guest_name = b.user.full_name if b.user else f"user_id:{b.user_id}"
+        # Manual bookings store guest_name in special_requests as "Manual booking for guest: X"
+        if b.special_requests and b.special_requests.startswith("Manual booking for guest: "):
+            guest_name = b.special_requests[len("Manual booking for guest: "):]
+        elif b.user:
+            guest_name = b.user.full_name
+        else:
+            guest_name = f"user_id:{b.user_id}"
         results.append(
             BookingResponse(
                 id=b.id,

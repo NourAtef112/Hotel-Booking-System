@@ -59,8 +59,7 @@ class UserResponse(BaseModel):
     university_id: Optional[str]
     is_verified: bool
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class RegisterResponse(BaseModel):

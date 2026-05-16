@@ -19,6 +19,7 @@ from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.booking import Booking
 from app.models.room import Room
@@ -60,7 +61,12 @@ class AdminRepository:
         Returns:
             List of Booking ORM objects.
         """
-        stmt = select(Booking).offset(skip).limit(limit)
+        stmt = (
+            select(Booking)
+            .options(selectinload(Booking.user))  # eagerly load user to avoid lazy-load error
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 

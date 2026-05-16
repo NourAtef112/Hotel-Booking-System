@@ -2,18 +2,20 @@
 deps.py — FastAPI dependencies.
 """
 
+from typing import Optional
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError
 from app.db.session import get_db
 from app.core import security
 from app.repositories import user_repository
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# auto_error=False so we can raise 401 (not 403) when no token is supplied.
+http_bearer = HTTPBearer(auto_error=False)
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
     session: AsyncSession = Depends(get_db)
 ):
     """
@@ -24,7 +26,11 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
+    if credentials is None:
+        raise credentials_exception
+
+    token = credentials.credentials
     payload = security.decode_access_token(token)
     if payload is None:
         raise credentials_exception
