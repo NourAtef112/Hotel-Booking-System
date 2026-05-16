@@ -89,7 +89,16 @@ logs/
 .env.*.local
 !.env.example
 secret.json
+secrets.json
+postman_environment.json
 secrets/
+
+# Testing artifacts
+playwright-report/
+test-results/
+
+# Local QA / audit scratch scripts
+audit_router.py
 
 # Mobile App specifics (React Native / Expo / Bare Workflow)
 ios/Pods/

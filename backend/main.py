@@ -20,10 +20,10 @@ app = FastAPI(
 )
 
 # --- Router Registration ---
-app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
-app.include_router(room_routes.router, prefix="/rooms", tags=["Rooms"])
-app.include_router(booking_routes.router, prefix="/bookings", tags=["Bookings"])
-app.include_router(admin_routes.router, prefix="/admin", tags=["Admin"])
+app.include_router(auth_routes.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(room_routes.router, prefix="/api/rooms", tags=["Rooms"])
+app.include_router(booking_routes.router, prefix="/api/bookings", tags=["Bookings"])
+app.include_router(admin_routes.router, prefix="/api/admin", tags=["Admin"])
 
 
 @app.get("/health", tags=["Health"])
