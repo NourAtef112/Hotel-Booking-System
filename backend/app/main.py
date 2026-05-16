@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
 from app.api.v1.ws_availability import router as ws_router
-from app.core.database import create_all_tables
+from app.core.database import AsyncSessionLocal, create_all_tables
+from app.mocks.seed_rooms import run_seed
 from app.core.errors import generic_exception_handler, validation_exception_handler
 
 app = FastAPI(
@@ -32,6 +33,8 @@ app.include_router(ws_router)
 @app.on_event("startup")
 async def on_startup() -> None:
     await create_all_tables()
+    async with AsyncSessionLocal() as session:
+        await run_seed(session)
 
 
 @app.get("/health", tags=["health"])
