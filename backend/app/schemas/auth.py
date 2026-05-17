@@ -27,3 +27,11 @@ class RegisterResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class FirebaseLoginRequest(BaseModel):
+    id_token: str
+
+
+class FirebaseLoginResponse(BaseModel):
+    user: UserPublic

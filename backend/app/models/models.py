@@ -17,7 +17,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(512), nullable=False)
+    firebase_uid = Column(String(255), unique=True, nullable=True, index=True)
+    hashed_password = Column(String(512), nullable=True)
     full_name = Column(String(255), nullable=False)
     role = Column(
         Enum("guest", "admin", name="user_role"),

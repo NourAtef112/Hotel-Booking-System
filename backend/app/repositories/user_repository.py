@@ -53,6 +53,27 @@ async def delete_user(session: AsyncSession, user_id: int) -> None:
     await session.flush()
 
 
+async def get_by_firebase_uid(session: AsyncSession, firebase_uid: str) -> Optional[User]:
+    result = await session.execute(select(User).where(User.firebase_uid == firebase_uid))
+    return result.scalar_one_or_none()
+
+
+async def create_firebase_user(
+    session: AsyncSession, firebase_uid: str, email: str, full_name: str
+) -> User:
+    user = User(
+        firebase_uid=firebase_uid,
+        email=email,
+        full_name=full_name,
+        hashed_password=None,
+        role="guest",
+    )
+    session.add(user)
+    await session.flush()
+    await session.refresh(user)
+    return user
+
+
 async def get_all_users(session: AsyncSession, page: int = 1, page_size: int = 20) -> List[User]:
     """Retrieve all active users with pagination (admin use)."""
     result = await session.execute(

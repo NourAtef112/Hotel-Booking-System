@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8081"]
 
+    # Firebase Auth
+    FIREBASE_PROJECT_ID: str = ""
+    FIREBASE_CREDENTIALS_JSON: str = ""  # Service account JSON as a single-line string
+
     # Paymob Payment Gateway — loaded from .env, no defaults for secret keys
     PAYMOB_SECRET_KEY: str = ""
     PAYMOB_PUBLIC_KEY: str = ""

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import security
 from app.core.config import settings
 from app.core.exceptions import AuthenticationError, DuplicateEmailError, InvalidTokenError
+from app.core.firebase import verify_firebase_token_async
 from app.repositories import user_repository
 
 
@@ -57,6 +58,22 @@ async def login(session: AsyncSession, email: str, password: str) -> dict:
         "token_type": "bearer",
         "expires_in": settings.ACCESS_TOKEN_EXPIRE_HOURS * 3600,
     }
+
+
+async def firebase_login(session: AsyncSession, id_token: str) -> dict:
+    """Verify Firebase ID token, auto-create user on first login."""
+    decoded = await verify_firebase_token_async(id_token)
+    firebase_uid = decoded["uid"]
+    email = decoded.get("email", "")
+    name = decoded.get("name", email.split("@")[0] if email else firebase_uid)
+
+    user = await user_repository.get_by_firebase_uid(session, firebase_uid)
+    if not user:
+        user = await user_repository.create_firebase_user(session, firebase_uid, email, name)
+        await session.commit()
+        await session.refresh(user)
+
+    return {"user": user}
 
 
 async def get_current_user(session: AsyncSession, token: str):

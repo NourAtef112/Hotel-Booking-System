@@ -4,8 +4,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.exceptions import AuthenticationError, DuplicateEmailError, InvalidTokenError
-from app.schemas.auth import LoginRequest, RegisterRequest, RegisterResponse, TokenResponse
+from app.core.firebase import verify_firebase_token_async
+from app.repositories import user_repository
+from app.schemas.auth import (
+    FirebaseLoginRequest,
+    FirebaseLoginResponse,
+    LoginRequest,
+    RegisterRequest,
+    RegisterResponse,
+    TokenResponse,
+)
 from app.schemas.common import ErrorResponse
+from app.schemas.user import UserPublic
 from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -19,7 +29,16 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     session: AsyncSession = Depends(get_db),
 ):
-    """Decode Bearer token and return the authenticated User ORM object."""
+    """Decode Bearer token (Firebase ID token or custom JWT) and return the User."""
+    # Try Firebase ID token first
+    try:
+        decoded = await verify_firebase_token_async(token)
+        user = await user_repository.get_by_firebase_uid(session, decoded["uid"])
+        if user:
+            return user
+    except Exception:
+        pass
+    # Fall back to custom JWT (local dev / admin)
     try:
         return await auth_service.get_current_user(session, token)
     except InvalidTokenError as exc:
@@ -43,6 +62,29 @@ async def get_current_admin(
 
 
 # ── Routes ──────────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/firebase-login",
+    response_model=FirebaseLoginResponse,
+    status_code=200,
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid or expired Firebase token"},
+    },
+)
+async def firebase_login(
+    body: FirebaseLoginRequest,
+    session: AsyncSession = Depends(get_db),
+) -> FirebaseLoginResponse:
+    try:
+        result = await auth_service.firebase_login(session, body.id_token)
+        return {"user": UserPublic.model_validate(result["user"])}
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "INVALID_FIREBASE_TOKEN", "message": "Firebase token is invalid or expired"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 @router.post(
     "/register",
