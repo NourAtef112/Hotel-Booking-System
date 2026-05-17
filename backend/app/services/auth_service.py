@@ -41,7 +41,7 @@ async def register(
         "user": user,
         "access_token": token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_HOURS * 3600,
     }
 
 
@@ -55,7 +55,7 @@ async def login(session: AsyncSession, email: str, password: str) -> dict:
     return {
         "access_token": token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_HOURS * 3600,
     }
 
 
