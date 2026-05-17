@@ -11,6 +11,30 @@ from app.api.deps import get_db, get_current_user
 
 router = APIRouter()
 
+# ORM Room.status uses "booked"; RoomStatus schema uses "occupied"
+_STATUS_MAP = {"booked": "occupied"}
+# ORM Room.room_type has "vip_suite"; RoomType schema only has single/double/suite/family
+_TYPE_MAP = {"vip_suite": "suite"}
+
+
+def _to_room_dict(room) -> dict:
+    """Map a Room ORM object to a RoomResponse-compatible dict.
+    If already a dict (test mocks return dicts), pass through unchanged.
+    """
+    if isinstance(room, dict):
+        return room
+    return {
+        "id": room.id,
+        "name": room.room_number,
+        "room_type": _TYPE_MAP.get(room.room_type, room.room_type),
+        "capacity": 1 if room.room_type == "single" else 2,
+        "price_per_night": float(room.price_per_night),
+        "status": _STATUS_MAP.get(room.status, room.status),
+        "amenities": [],
+        "description": None,
+        "image_url": None,
+    }
+
 
 @router.get("/", response_model=RoomListResponse)
 async def list_rooms(
@@ -21,18 +45,14 @@ async def list_rooms(
     session: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ):
-    """
-    GET /rooms
-    Return a paginated list of rooms with optional filters.
-    """
     result = await room_service.get_rooms(
         session, available=available, room_type=room_type, page=page, page_size=page_size
     )
     return {
-        "rooms": result["rooms"],
+        "rooms": [_to_room_dict(r) for r in result["rooms"]],
         "total": result["total"],
         "page": page,
-        "page_size": page_size
+        "page_size": page_size,
     }
 
 
@@ -42,8 +62,5 @@ async def get_room(
     session: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
 ):
-    """
-    GET /rooms/{room_id}
-    Return details for a specific room.
-    """
-    return await room_service.get_room_by_id(session, room_id)
+    room = await room_service.get_room_by_id(session, room_id)
+    return _to_room_dict(room)
