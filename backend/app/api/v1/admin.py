@@ -11,6 +11,10 @@ from app.services.booking_service import _ALLOWED_TRANSITIONS
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+def get_booking_repo(db: AsyncSession = Depends(get_db)) -> SQLBookingRepository:
+    return SQLBookingRepository(db)
+
+
 @router.get(
     "/bookings",
     response_model=list[BookingPublic],
@@ -18,9 +22,8 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 )
 async def list_all_bookings(
     _admin=Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
+    repo=Depends(get_booking_repo),
 ) -> list[BookingPublic]:
-    repo = SQLBookingRepository(db)
     bookings = await repo.get_all_bookings()
     return [BookingPublic.model_validate(b.__dict__) for b in bookings]
 
@@ -38,10 +41,9 @@ async def update_booking_status(
     booking_id: int,
     body: BookingStatusUpdate,
     _admin=Depends(get_current_admin),
+    repo=Depends(get_booking_repo),
     db: AsyncSession = Depends(get_db),
 ) -> BookingPublic:
-    repo = SQLBookingRepository(db)
-
     booking = await repo.get_booking_by_id(booking_id)
     if booking is None:
         raise HTTPException(

@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.room_schemas import RoomResponse, RoomListResponse
 from app.services import room_service
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
 
 router = APIRouter()
 
@@ -18,7 +18,8 @@ async def list_rooms(
     room_type: Optional[str] = Query(None, description="Filter by room type"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ):
     """
     GET /rooms
@@ -38,7 +39,8 @@ async def list_rooms(
 @router.get("/{room_id}", response_model=RoomResponse)
 async def get_room(
     room_id: int,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    _user=Depends(get_current_user),
 ):
     """
     GET /rooms/{room_id}

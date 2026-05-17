@@ -13,6 +13,10 @@ from app.services.booking_service import calculate_cost
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 
+def get_booking_repo(db: AsyncSession = Depends(get_db)) -> SQLBookingRepository:
+    return SQLBookingRepository(db)
+
+
 @router.post(
     "/",
     response_model=BookingPublic,
@@ -26,10 +30,9 @@ router = APIRouter(prefix="/bookings", tags=["bookings"])
 async def create_booking(
     body: BookingCreate,
     current_user=Depends(get_current_user),
+    repo=Depends(get_booking_repo),
     db: AsyncSession = Depends(get_db),
 ) -> BookingPublic:
-    repo = SQLBookingRepository(db)
-
     room = await repo.get_room(body.room_id)
     if room is None:
         raise HTTPException(
@@ -65,8 +68,7 @@ async def create_booking(
 )
 async def my_bookings(
     current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo=Depends(get_booking_repo),
 ) -> list[BookingPublic]:
-    repo = SQLBookingRepository(db)
     bookings = await repo.get_bookings_for_user(current_user.id)
     return [BookingPublic.model_validate(b.__dict__) for b in bookings]
