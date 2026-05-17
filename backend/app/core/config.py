@@ -27,13 +27,21 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/guest_housing"
 
-    @field_validator("DATABASE_URL")
+    @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
+        # Railway provides postgres:// or postgresql:// — convert to asyncpg driver format
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Strip ?sslmode= query param — asyncpg handles SSL via connect_args, not URL
+        if "?sslmode=" in v:
+            v = v.split("?sslmode=")[0]
         if not v.startswith("postgresql+asyncpg://"):
             raise ValueError(
-                "DATABASE_URL must start with 'postgresql+asyncpg://' — "
-                f"got: {v!r}. Check your .env file."
+                "DATABASE_URL must start with 'postgresql+asyncpg://', 'postgresql://', or 'postgres://' — "
+                f"got: {v!r}"
             )
         return v
 
