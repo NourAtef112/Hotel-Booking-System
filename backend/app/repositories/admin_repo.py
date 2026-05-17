@@ -48,6 +48,11 @@ class AdminRepository:
     # READ
     # ------------------------------------------------------------------
 
+    async def get_all_rooms(self, skip: int = 0, limit: int = 200) -> List[Room]:
+        stmt = select(Room).where(Room.is_active == True).offset(skip).limit(limit)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_all_bookings(
         self, skip: int = 0, limit: int = 100
     ) -> List[Booking]:
@@ -95,6 +100,21 @@ class AdminRepository:
     # ------------------------------------------------------------------
     # CREATE — Manual Booking
     # ------------------------------------------------------------------
+
+    async def update_booking_status(self, booking_id: int, new_status: str) -> Optional[Booking]:
+        """
+        Update the status of an existing booking.
+
+        Returns the updated Booking, or None if not found.
+        """
+        result = await self.db.execute(select(Booking).where(Booking.id == booking_id))
+        booking = result.scalar_one_or_none()
+        if booking is None:
+            return None
+        booking.status = new_status
+        await self.db.flush()
+        await self.db.refresh(booking)
+        return booking
 
     async def create_manual_booking(self, booking_data: dict) -> Booking:
         """

@@ -65,6 +65,7 @@ class BookingResponse(BaseModel):
     Response for:
     - POST /api/admin/bookings/manual  (created booking)
     - GET  /api/admin/bookings         (list of all bookings)
+    - PATCH /api/admin/bookings/{id}/status
     """
 
     id: int
@@ -76,3 +77,8 @@ class BookingResponse(BaseModel):
 
     # Pydantic v2: allows reading directly from SQLAlchemy model instances
     model_config = {"from_attributes": True}
+
+
+class BookingStatusUpdate(BaseModel):
+    """Body for PATCH /api/admin/bookings/{id}/status"""
+    status: str  # "pending" | "confirmed" | "cancelled" | "completed"

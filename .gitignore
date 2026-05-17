@@ -99,6 +99,8 @@ test-results/
 
 # Local QA / audit scratch scripts
 audit_router.py
+backend/create_admin.py
+backend/seed_data.py
 
 # Mobile App specifics (React Native / Expo / Bare Workflow)
 ios/Pods/
