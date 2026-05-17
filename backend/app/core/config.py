@@ -24,23 +24,23 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/guest_housing"
+    # Database — required, no default (set DATABASE_URL env var; Supabase URI format accepted)
+    DATABASE_URL: str
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
-        # Railway provides postgres:// or postgresql:// — convert to asyncpg driver format
+        # Convert Supabase/Railway postgres:// or postgresql:// to asyncpg driver format
         if v.startswith("postgres://"):
             v = v.replace("postgres://", "postgresql+asyncpg://", 1)
         elif v.startswith("postgresql://"):
             v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
-        # Strip ?sslmode= query param — asyncpg handles SSL via connect_args, not URL
-        if "?sslmode=" in v:
-            v = v.split("?sslmode=")[0]
+        # Strip all query params — asyncpg uses connect_args for SSL, not URL query strings
+        if "?" in v:
+            v = v.split("?")[0]
         if not v.startswith("postgresql+asyncpg://"):
             raise ValueError(
-                "DATABASE_URL must start with 'postgresql+asyncpg://', 'postgresql://', or 'postgres://' — "
+                "DATABASE_URL must be a postgresql:// or postgres:// URI — "
                 f"got: {v!r}"
             )
         return v
