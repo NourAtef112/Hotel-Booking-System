@@ -3,6 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "backend/Dockerfile",
+    "dockerContextPath": "backend",
     "dockerBuildTarget": "production"
   },
   "deploy": {
