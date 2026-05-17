@@ -116,6 +116,23 @@ class AdminRepository:
         await self.db.refresh(booking)
         return booking
 
+    async def update_booking(self, booking_id: int, fields: dict) -> Optional[Booking]:
+        """Update editable fields (dates, guest name) on an existing booking."""
+        from datetime import date as _date
+        result = await self.db.execute(select(Booking).where(Booking.id == booking_id))
+        booking = result.scalar_one_or_none()
+        if booking is None:
+            return None
+        if "check_in_date" in fields:
+            booking.check_in_date = fields["check_in_date"]
+        if "check_out_date" in fields:
+            booking.check_out_date = fields["check_out_date"]
+        if "special_requests" in fields:
+            booking.special_requests = fields["special_requests"]
+        await self.db.flush()
+        await self.db.refresh(booking)
+        return booking
+
     async def create_manual_booking(self, booking_data: dict) -> Booking:
         """
         Insert a new Booking record on behalf of an admin.

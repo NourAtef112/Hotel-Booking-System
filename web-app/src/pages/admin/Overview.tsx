@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useAdminBookings, useAdminRooms } from '../../hooks/useAdminApi'
+import { useTheme } from '../../contexts/ThemeContext'
+import { useAdminBookings, useAdminRooms, useUpdateBookingStatus } from '../../hooks/useAdminApi'
 import { useGlowCard } from '../../hooks/useGlowCard'
-import type { BookingStatus, RoomType } from '../../types/admin'
+import type { Booking, BookingStatus, RoomType } from '../../types/admin'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -152,7 +153,7 @@ function RevenueCard({
 
 // ─── Bar Chart ───────────────────────────────────────────────────────────────
 
-function BarChart({ data, visible }: { data: { label: string; count: number }[]; visible: boolean }) {
+function BarChart({ data, visible, isDark }: { data: { label: string; count: number }[]; visible: boolean; isDark: boolean }) {
   const max = Math.max(...data.map(d => d.count), 1)
   const W = 520, H = 170
   const pad = { t: 28, r: 12, b: 32, l: 28 }
@@ -160,6 +161,12 @@ function BarChart({ data, visible }: { data: { label: string; count: number }[];
   const ch = H - pad.t - pad.b
   const slot = cw / data.length
   const gap = slot * 0.38
+
+  const gridColor   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)'
+  const labelMuted  = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(13,13,18,0.35)'
+  const labelBright = isDark ? 'rgba(255,255,255,0.65)' : 'rgba(13,13,18,0.80)'
+  const trackFill   = isDark ? 'white'                  : 'black'
+  const emptyFill   = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)'
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
@@ -175,9 +182,9 @@ function BarChart({ data, visible }: { data: { label: string; count: number }[];
         return (
           <g key={t}>
             <line x1={pad.l} x2={W - pad.r} y1={y} y2={y}
-              stroke="white" strokeOpacity="0.05" strokeWidth="1" strokeDasharray="4 4" />
+              stroke={gridColor} strokeWidth="1" strokeDasharray="4 4" />
             <text x={pad.l - 6} y={y + 3.5} textAnchor="end"
-              fill="rgba(255,255,255,0.2)" fontSize="9" fontFamily="system-ui">
+              fill={labelMuted} fontSize="9" fontFamily="system-ui">
               {Math.round(max * t)}
             </text>
           </g>
@@ -193,29 +200,25 @@ function BarChart({ data, visible }: { data: { label: string; count: number }[];
 
         return (
           <g key={i}>
-            {/* Track */}
             <rect x={x} y={pad.t} width={w} height={ch}
-              fill="white" fillOpacity="0.015" rx="4" />
-            {/* Bar */}
+              fill={trackFill} fillOpacity="0.015" rx="4" />
             <rect x={x} y={y} width={w} height={barH} rx="4"
-              fill={d.count > 0 ? 'url(#barGrad)' : 'rgba(255,255,255,0.03)'}
+              fill={d.count > 0 ? 'url(#barGrad)' : emptyFill}
               style={{
                 transformBox: 'fill-box',
                 transformOrigin: 'center bottom',
                 animation: visible ? `barGrow 0.65s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms both` : 'none',
               }}
             />
-            {/* Count label */}
             {d.count > 0 && (
               <text x={x + w / 2} y={y - 7} textAnchor="middle"
-                fill="rgba(255,255,255,0.6)" fontSize="10" fontFamily="system-ui" fontWeight="600"
+                fill={labelBright} fontSize="10" fontFamily="system-ui" fontWeight="600"
                 style={{ animation: visible ? `fadeIn 0.4s ease ${delay + 300}ms both` : 'none' }}>
                 {d.count}
               </text>
             )}
-            {/* Month label */}
             <text x={x + w / 2} y={H - 7} textAnchor="middle"
-              fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="system-ui">
+              fill={labelMuted} fontSize="10" fontFamily="system-ui">
               {d.label}
             </text>
           </g>
@@ -227,7 +230,7 @@ function BarChart({ data, visible }: { data: { label: string; count: number }[];
 
 // ─── Line/area chart ─────────────────────────────────────────────────────────
 
-function LineChart({ data, visible }: { data: { label: string; value: number }[]; visible: boolean }) {
+function LineChart({ data, visible, isDark }: { data: { label: string; value: number }[]; visible: boolean; isDark: boolean }) {
   const max = Math.max(...data.map(d => d.value), 1)
   const W = 520, H = 110
   const pad = { t: 16, r: 12, b: 26, l: 10 }
@@ -283,7 +286,7 @@ function LineChart({ data, visible }: { data: { label: string; value: number }[]
             style={{ animation: visible ? `dotPop 0.4s cubic-bezier(0.34,1.56,0.64,1) ${300 + i * 120}ms both` : 'none' }}
           />
           <text x={p.x} y={H - 5} textAnchor="middle"
-            fill="rgba(255,255,255,0.25)" fontSize="10" fontFamily="system-ui">
+            fill={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(13,13,18,0.38)'} fontSize="10" fontFamily="system-ui">
             {p.label}
           </text>
         </g>
@@ -292,9 +295,239 @@ function LineChart({ data, visible }: { data: { label: string; value: number }[]
   )
 }
 
+// ─── Today's Agenda ──────────────────────────────────────────────────────────
+
+function TodayAgenda({
+  bookings,
+  roomMap,
+  loading,
+}: {
+  bookings: Booking[]
+  roomMap: Map<number, { room_number: string; type: string }>
+  loading: boolean
+}) {
+  const today = new Date().toISOString().split('T')[0]
+  const checkIns  = bookings.filter(b => b.start_date === today && b.status !== 'cancelled')
+  const checkOuts = bookings.filter(b => b.end_date   === today && b.status !== 'cancelled')
+  const isEmpty   = checkIns.length === 0 && checkOuts.length === 0
+
+  function GuestRow({ b, type }: { b: Booking; type: 'in' | 'out' }) {
+    const initials = b.guest_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+    const room = roomMap.get(b.room_id)
+    return (
+      <div className="flex items-center gap-3 py-2.5">
+        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/25 flex items-center justify-center text-primary text-[11px] font-bold shrink-0">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white truncate">{b.guest_name}</p>
+          <p className="text-xs text-white/35">
+            {room ? `Room ${room.room_number}` : `Room ${b.room_id}`}
+            {room ? ` · ${room.type}` : ''}
+          </p>
+        </div>
+        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+          type === 'in'
+            ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+            : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+        }`}>
+          {type === 'in' ? 'Check-in' : 'Check-out'}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="glass rounded-2xl border border-white/[0.06] overflow-hidden"
+      style={{ animation: 'slideUp 0.55s cubic-bezier(0.16,1,0.3,1) 90ms both' }}>
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Today's Agenda</p>
+            <p className="text-[11px] text-white/30">
+              {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {!loading && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="text-xs text-white/40">{checkIns.length} in</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span className="text-xs text-white/40">{checkOuts.length} out</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-5 py-3 max-h-64 overflow-y-auto scroll-area-viewport">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-2.5">
+              <div className="w-8 h-8 rounded-full bg-white/[0.06] animate-pulse shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-32 bg-white/[0.05] rounded animate-pulse" />
+                <div className="h-2.5 w-20 bg-white/[0.04] rounded animate-pulse" />
+              </div>
+            </div>
+          ))
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-400 mb-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-white/40">All clear today</p>
+            <p className="text-xs text-white/25 mt-0.5">No check-ins or check-outs scheduled</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/[0.04]">
+            {[...checkIns.map(b => ({ b, type: 'in' as const })),
+              ...checkOuts.map(b => ({ b, type: 'out' as const }))
+            ].map(({ b, type }) => (
+              <GuestRow key={`${type}-${b.id}`} b={b} type={type} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Pending Approvals ────────────────────────────────────────────────────────
+
+function PendingApprovals({
+  bookings,
+  roomMap,
+  loading,
+}: {
+  bookings: Booking[]
+  roomMap: Map<number, { room_number: string; price_per_night: number }>
+  loading: boolean
+}) {
+  const updateStatus = useUpdateBookingStatus()
+  const pending = bookings.filter(b => b.status === 'pending')
+
+  function calcNights(start: string, end: string) {
+    return Math.max(0, Math.round(
+      (new Date(end + 'T00:00:00').getTime() - new Date(start + 'T00:00:00').getTime()) / 86_400_000
+    ))
+  }
+
+  return (
+    <div className="glass rounded-2xl border border-white/[0.06] overflow-hidden"
+      style={{ animation: 'slideUp 0.55s cubic-bezier(0.16,1,0.3,1) 170ms both' }}>
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Pending Approvals</p>
+            <p className="text-[11px] text-white/30">Awaiting confirmation</p>
+          </div>
+        </div>
+        {!loading && pending.length > 0 && (
+          <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold rounded-full">
+            {pending.length}
+          </span>
+        )}
+      </div>
+
+      {/* List */}
+      <div className="divide-y divide-white/[0.04] max-h-64 overflow-y-auto scroll-area-viewport">
+        {loading ? (
+          Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="px-5 py-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-white/[0.06] animate-pulse shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-36 bg-white/[0.05] rounded animate-pulse" />
+                <div className="h-2.5 w-24 bg-white/[0.04] rounded animate-pulse" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-7 w-16 bg-white/[0.05] rounded-lg animate-pulse" />
+                <div className="h-7 w-14 bg-white/[0.05] rounded-lg animate-pulse" />
+              </div>
+            </div>
+          ))
+        ) : pending.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-400 mb-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-white/40">Nothing pending</p>
+            <p className="text-xs text-white/25 mt-0.5">All bookings have been reviewed</p>
+          </div>
+        ) : (
+          pending.map(b => {
+            const initials = b.guest_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+            const room = roomMap.get(b.room_id)
+            const nights = calcNights(b.start_date, b.end_date)
+            const cost = room ? nights * room.price_per_night : null
+            const isUpdating = updateStatus.isPending &&
+              (updateStatus.variables as { id: number } | undefined)?.id === b.id
+
+            return (
+              <div key={b.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+                <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/25 flex items-center justify-center text-primary text-[11px] font-bold shrink-0">
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{b.guest_name}</p>
+                  <p className="text-xs text-white/35">
+                    Room {b.room_id} · {b.start_date} → {b.end_date}
+                    {cost !== null ? ` · ${fmtEGP(cost)}` : ''}
+                  </p>
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <button
+                    disabled={isUpdating}
+                    onClick={() => updateStatus.mutate({ id: b.id, status: 'confirmed' })}
+                    className="px-3 py-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? '…' : 'Confirm'}
+                  </button>
+                  <button
+                    disabled={isUpdating}
+                    onClick={() => updateStatus.mutate({ id: b.id, status: 'cancelled' })}
+                    className="px-3 py-1.5 text-[11px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? '…' : 'Reject'}
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Overview() {
+  const { mode } = useTheme()
+  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
   const { data: bookings = [], isLoading: bLoad } = useAdminBookings()
   const { data: rooms = [],    isLoading: rLoad } = useAdminRooms()
   const isLoading = bLoad || rLoad
@@ -393,6 +626,12 @@ export default function Overview() {
         <StatCard loading={isLoading} delay={320} label="Cancelled"      target={counts.cancelled}  accent="text-red-400"     sub={`${counts.completed} completed`} />
       </div>
 
+      {/* ── Today + Pending ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TodayAgenda bookings={bookings} roomMap={roomMap} loading={isLoading} />
+        <PendingApprovals bookings={bookings} roomMap={roomMap} loading={isLoading} />
+      </div>
+
       {/* ── Revenue cards ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <RevenueCard
@@ -450,7 +689,7 @@ export default function Overview() {
           </div>
           {isLoading
             ? <div className="h-40 bg-white/[0.03] rounded-xl animate-pulse" />
-            : <BarChart data={monthly} visible={chartsVisible} />
+            : <BarChart data={monthly} visible={chartsVisible} isDark={isDark} />
           }
         </div>
 
@@ -524,7 +763,7 @@ export default function Overview() {
           </div>
           {isLoading
             ? <div className="h-24 bg-white/[0.03] rounded-xl animate-pulse" />
-            : <LineChart data={monthly.map(m => ({ label: m.label, value: m.revenue }))} visible={chartsVisible} />
+            : <LineChart data={monthly.map(m => ({ label: m.label, value: m.revenue }))} visible={chartsVisible} isDark={isDark} />
           }
 
           {!isLoading && revenueByType.length > 0 && (

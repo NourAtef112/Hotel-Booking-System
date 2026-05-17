@@ -19,6 +19,7 @@ from app.repositories.admin_repo import AdminRepository
 from app.schemas.admin import (
     BookingResponse,
     BookingStatusUpdate,
+    BookingUpdate,
     ManualBookingCreate,
     RoomCreate,
     RoomResponse,
@@ -183,6 +184,62 @@ async def create_manual_booking(
 # ---------------------------------------------------------------------------
 # PATCH /admin/bookings/{booking_id}/status
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# PATCH /admin/bookings/{booking_id}  — edit booking details
+# ---------------------------------------------------------------------------
+
+@router.patch("/bookings/{booking_id}", response_model=BookingResponse)
+async def update_booking(
+    booking_id: int,
+    payload: BookingUpdate,
+    session: AsyncSession = Depends(get_db),
+) -> BookingResponse:
+    from datetime import date as _date
+
+    repo = AdminRepository(session)
+    fields: dict = {}
+
+    if payload.start_date is not None:
+        try:
+            fields["check_in_date"] = _date.fromisoformat(payload.start_date)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="start_date must be YYYY-MM-DD")
+
+    if payload.end_date is not None:
+        try:
+            fields["check_out_date"] = _date.fromisoformat(payload.end_date)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="end_date must be YYYY-MM-DD")
+
+    updated = await repo.update_booking(booking_id, fields)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    # Update guest name in special_requests if provided
+    if payload.guest_name is not None:
+        updated.special_requests = f"Manual booking for guest: {payload.guest_name}"
+        await session.flush()
+
+    await session.commit()
+    await session.refresh(updated)
+
+    if updated.special_requests and updated.special_requests.startswith("Manual booking for guest: "):
+        guest_name = updated.special_requests[len("Manual booking for guest: "):]
+    elif updated.user:
+        guest_name = updated.user.full_name
+    else:
+        guest_name = f"user_id:{updated.user_id}"
+
+    return BookingResponse(
+        id=updated.id,
+        guest_name=guest_name,
+        room_id=updated.room_id,
+        start_date=str(updated.check_in_date),
+        end_date=str(updated.check_out_date),
+        status=updated.status,
+    )
+
 
 ALLOWED_STATUSES = {"pending", "confirmed", "cancelled", "completed"}
 

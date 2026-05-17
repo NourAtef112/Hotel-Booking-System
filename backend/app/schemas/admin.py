@@ -82,3 +82,10 @@ class BookingResponse(BaseModel):
 class BookingStatusUpdate(BaseModel):
     """Body for PATCH /api/admin/bookings/{id}/status"""
     status: str  # "pending" | "confirmed" | "cancelled" | "completed"
+
+
+class BookingUpdate(BaseModel):
+    """Body for PATCH /api/admin/bookings/{id} — edit booking details."""
+    guest_name: str | None = None
+    start_date: str | None = None   # YYYY-MM-DD
+    end_date: str | None = None     # YYYY-MM-DD

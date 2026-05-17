@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { clearToken } from '../lib/auth'
+import NotificationBell from '../components/NotificationBell'
 import ScrollArea from '../components/ScrollArea'
+import ToastContainer from '../components/ToastContainer'
+import { useTheme, type ThemeMode } from '../contexts/ThemeContext'
+import { clearToken } from '../lib/auth'
 
 const navItems = [
   {
@@ -38,6 +41,70 @@ const navItems = [
   },
 ]
 
+const THEME_OPTIONS: { key: ThemeMode; label: string; icon: React.ReactNode }[] = [
+  {
+    key: 'dark',
+    label: 'Dark',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+        <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'system',
+    label: 'System',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+      </svg>
+    ),
+  },
+  {
+    key: 'light',
+    label: 'Light',
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+        <circle cx="12" cy="12" r="4.5"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+    ),
+  },
+]
+
+function ThemeToggle() {
+  const { mode, setMode } = useTheme()
+
+  return (
+    <div className="px-1 mb-2">
+      <p className="text-[10px] uppercase tracking-widest text-white/25 font-medium mb-2 px-2">Appearance</p>
+      <div className="flex items-center p-1 rounded-xl bg-white/[0.05] border border-white/[0.06] gap-0.5">
+        {THEME_OPTIONS.map(({ key, label, icon }) => {
+          const isActive = mode === key
+          return (
+            <button
+              key={key}
+              onClick={() => setMode(key)}
+              title={label}
+              className={`
+                flex-1 flex flex-col items-center gap-1 py-2 rounded-lg text-[10px] font-medium
+                transition-all duration-200
+                ${isActive
+                  ? 'bg-primary text-white shadow-glow-sm'
+                  : 'text-white/35 hover:text-white/60 hover:bg-white/[0.05]'
+                }
+              `}
+            >
+              {icon}
+              {label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
@@ -49,6 +116,7 @@ export default function AdminLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#080808]">
+      <ToastContainer />
       {/* Background glows */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute top-0 right-0 w-[700px] h-[500px] bg-radial-red" />
@@ -118,8 +186,9 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        {/* User / Logout */}
+        {/* Theme + User / Logout */}
         <div className="p-4 border-t border-white/[0.06]">
+          <ThemeToggle />
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-2">
             <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold">
               A
@@ -162,6 +231,8 @@ export default function AdminLayout() {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Live
           </div>
+
+          <NotificationBell />
 
           {/* Avatar */}
           <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-bold">
