@@ -1,0 +1,17 @@
+.git/
+.claude/
+*.pdf
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.py[cod]
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/htmlcov/
+backend/.coverage
+backend/*.log

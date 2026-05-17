@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import api_router
 from app.api.v1.ws_availability import router as ws_router
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal, create_all_tables
 from app.mocks.seed_rooms import run_seed
 from app.core.errors import generic_exception_handler, validation_exception_handler
@@ -17,7 +18,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
