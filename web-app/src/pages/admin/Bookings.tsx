@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import CustomSelect from '../../components/CustomSelect'
 import DatePicker from '../../components/DatePicker'
+import ExportButton from '../../components/ExportButton'
+import { exportBookingsExcel } from '../../lib/exportExcel'
 import {
   useAdminBookings,
   useAdminRooms,
@@ -67,7 +69,7 @@ const ROOM_TYPE_COLOR: Record<string, string> = {
   single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399',
 }
 
-const emptyBookingForm: ManualBookingCreate = { guest_name: '', room_id: 0, start_date: '', end_date: '' }
+const emptyBookingForm: ManualBookingCreate = { guest_name: '', guest_email: '', guest_phone: '', room_id: 0, start_date: '', end_date: '' }
 type BookingFormErrors = Partial<Record<keyof ManualBookingCreate, string>>
 
 // ─── Status Flow Bar ─────────────────────────────────────────────────────────
@@ -203,7 +205,7 @@ function BookingDetailModal({
   // Re-sync form when the displayed booking changes
   useEffect(() => {
     if (b) {
-      setForm({ guest_name: b.guest_name, start_date: b.start_date, end_date: b.end_date })
+      setForm({ guest_name: b.guest_name, guest_email: b.guest_email ?? '', guest_phone: b.guest_phone ?? '', start_date: b.start_date, end_date: b.end_date })
       setSaveError(null)
     }
   }, [b?.id])
@@ -213,13 +215,17 @@ function BookingDetailModal({
   if (!b) return null
 
   const guestName  = form.guest_name  ?? b.guest_name
+  const guestEmail = form.guest_email ?? (b.guest_email ?? '')
+  const guestPhone = form.guest_phone ?? (b.guest_phone ?? '')
   const startDate  = form.start_date  ?? b.start_date
   const endDate    = form.end_date    ?? b.end_date
 
   const isDirty =
-    guestName !== b.guest_name ||
-    startDate !== b.start_date ||
-    endDate   !== b.end_date
+    guestName  !== b.guest_name ||
+    guestEmail !== (b.guest_email ?? '') ||
+    guestPhone !== (b.guest_phone ?? '') ||
+    startDate  !== b.start_date ||
+    endDate    !== b.end_date
 
   const datesChanged = startDate !== b.start_date || endDate !== b.end_date
   const nights = calcNights(startDate, endDate)
@@ -234,9 +240,11 @@ function BookingDetailModal({
     if (!b) return
     setSaveError(null)
     const payload: BookingUpdate = {}
-    if (guestName !== b.guest_name) payload.guest_name = guestName
-    if (startDate !== b.start_date) payload.start_date = startDate
-    if (endDate !== b.end_date) payload.end_date = endDate
+    if (guestName  !== b.guest_name)          payload.guest_name  = guestName
+    if (guestEmail !== (b.guest_email ?? ''))  payload.guest_email = guestEmail
+    if (guestPhone !== (b.guest_phone ?? ''))  payload.guest_phone = guestPhone
+    if (startDate  !== b.start_date)           payload.start_date  = startDate
+    if (endDate    !== b.end_date)             payload.end_date    = endDate
     updateBooking.mutate(
       { id: b.id, data: payload },
       {
@@ -312,15 +320,39 @@ function BookingDetailModal({
           <div className="flex-1 overflow-y-auto scroll-area-viewport px-6 py-5 space-y-5 min-h-0">
 
             {/* Guest details */}
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium mb-2.5">Guest Name</p>
-              <input
-                type="text"
-                value={guestName}
-                onChange={(e) => setForm((f) => ({ ...f, guest_name: e.target.value }))}
-                className={inputCls}
-                placeholder="Guest name"
-              />
+            <div className="space-y-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium mb-2.5">Guest Name</p>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setForm((f) => ({ ...f, guest_name: e.target.value }))}
+                  className={inputCls}
+                  placeholder="Guest name"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium mb-2.5">Email</p>
+                  <input
+                    type="email"
+                    value={guestEmail}
+                    onChange={(e) => setForm((f) => ({ ...f, guest_email: e.target.value }))}
+                    className={inputCls}
+                    placeholder="guest@example.com"
+                  />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium mb-2.5">Mobile Number</p>
+                  <input
+                    type="tel"
+                    value={guestPhone}
+                    onChange={(e) => setForm((f) => ({ ...f, guest_phone: e.target.value }))}
+                    className={inputCls}
+                    placeholder="+20 1XX XXX XXXX"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Room info (read-only display) */}
@@ -504,6 +536,11 @@ export default function Bookings() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
+  async function exportBookings() {
+    const today = new Date().toISOString().split('T')[0]
+    await exportBookingsExcel(bookings ?? [], roomMap, `ejust-reservations-${today}`)
+  }
+
   function validateForm(): boolean {
     const e: BookingFormErrors = {}
     if (!form.guest_name.trim()) e.guest_name = 'Guest name is required'
@@ -569,6 +606,9 @@ export default function Bookings() {
             </div>
           )}
 
+          {bookings && bookings.length > 0 && (
+            <ExportButton label="Export Excel" onClick={exportBookings} />
+          )}
           <button
             onClick={() => setModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-xl transition-all shadow-glow-sm hover:shadow-glow-red"
@@ -748,6 +788,14 @@ export default function Bookings() {
             <InputField label="Guest Name" error={formErrors.guest_name}>
               <input type="text" value={form.guest_name} onChange={(e) => setForm({ ...form, guest_name: e.target.value })} placeholder="e.g. John Doe" className={inputClass} />
             </InputField>
+            <div className="grid grid-cols-2 gap-4">
+              <InputField label="Email">
+                <input type="email" value={form.guest_email ?? ''} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="guest@example.com" className={inputClass} />
+              </InputField>
+              <InputField label="Mobile Number">
+                <input type="tel" value={form.guest_phone ?? ''} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="+20 1XX XXX XXXX" className={inputClass} />
+              </InputField>
+            </div>
             <InputField label="Room ID" error={formErrors.room_id}>
               <input type="number" min={1} value={form.room_id || ''} onChange={(e) => setForm({ ...form, room_id: parseInt(e.target.value) || 0 })} placeholder="e.g. 3" className={inputClass} />
             </InputField>

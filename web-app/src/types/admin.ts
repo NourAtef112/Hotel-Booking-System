@@ -17,6 +17,8 @@ export interface RoomCreate {
 export interface Booking {
   id: number
   guest_name: string
+  guest_email?: string
+  guest_phone?: string
   room_id: number
   start_date: string
   end_date: string
@@ -25,6 +27,8 @@ export interface Booking {
 
 export interface ManualBookingCreate {
   guest_name: string
+  guest_email?: string
+  guest_phone?: string
   room_id: number
   start_date: string
   end_date: string
@@ -32,6 +36,8 @@ export interface ManualBookingCreate {
 
 export interface BookingUpdate {
   guest_name?: string
+  guest_email?: string
+  guest_phone?: string
   start_date?: string
   end_date?: string
 }

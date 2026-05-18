@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ExportButton from '../../components/ExportButton'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAdminBookings, useAdminRooms, useUpdateBookingStatus } from '../../hooks/useAdminApi'
 import { useGlowCard } from '../../hooks/useGlowCard'
+import { exportMonthlyChartExcel, exportOverviewExcel, exportRevenueTrendExcel } from '../../lib/exportExcel'
 import type { Booking, BookingStatus, RoomType } from '../../types/admin'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -610,12 +612,33 @@ export default function Overview() {
     { key: 'completed', label: 'Completed' },
   ]
 
+  // ── Export helpers ───────────────────────────────────────────────────────────
+
+  const today = new Date().toISOString().split('T')[0]
+
+  async function exportOverviewReport() {
+    await exportOverviewExcel(counts, revenue, monthly, revenueByType, occupancy, `ejust-overview-report-${today}`)
+  }
+
+  async function exportMonthlyChart() {
+    await exportMonthlyChartExcel(monthly, `ejust-monthly-bookings-${today}`)
+  }
+
+  async function exportRevenueTrend() {
+    await exportRevenueTrendExcel(monthly, revenueByType, `ejust-revenue-trend-${today}`)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div style={{ animation: 'slideUp 0.4s ease both' }}>
-        <p className="text-[11px] uppercase tracking-widest text-white/30 font-medium mb-1">Dashboard</p>
-        <h1 className="text-2xl font-semibold text-white tracking-tight">Overview</h1>
+      <div className="flex items-end justify-between" style={{ animation: 'slideUp 0.4s ease both' }}>
+        <div>
+          <p className="text-[11px] uppercase tracking-widest text-white/30 font-medium mb-1">Dashboard</p>
+          <h1 className="text-2xl font-semibold text-white tracking-tight">Overview</h1>
+        </div>
+        {!isLoading && (
+          <ExportButton label="Export Report" onClick={exportOverviewReport} />
+        )}
       </div>
 
       {/* ── Booking stat cards ───────────────────────────────────────────── */}
@@ -683,9 +706,12 @@ export default function Overview() {
               <p className="text-sm font-semibold text-white">Monthly Bookings</p>
               <p className="text-xs text-white/30 mt-0.5">Check-ins per month</p>
             </div>
-            <span className="text-[10px] font-mono text-white/20 bg-white/[0.03] px-2 py-1 rounded-lg border border-white/[0.05]">
-              Last 6 months
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-white/20 bg-white/[0.03] px-2 py-1 rounded-lg border border-white/[0.05]">
+                Last 6 months
+              </span>
+              {!isLoading && <ExportButton variant="icon" label="Export chart data" onClick={exportMonthlyChart} />}
+            </div>
           </div>
           {isLoading
             ? <div className="h-40 bg-white/[0.03] rounded-xl animate-pulse" />
@@ -757,9 +783,12 @@ export default function Overview() {
           className="card-float glass rounded-2xl p-5 border border-white/[0.06] shadow-glass space-y-5"
           style={{ animation: 'slideUp 0.55s cubic-bezier(0.16,1,0.3,1) 350ms both' }}
         >
-          <div>
-            <p className="text-sm font-semibold text-white">Revenue Trend</p>
-            <p className="text-xs text-white/30 mt-0.5">Monthly confirmed revenue</p>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Revenue Trend</p>
+              <p className="text-xs text-white/30 mt-0.5">Monthly confirmed revenue</p>
+            </div>
+            {!isLoading && <ExportButton variant="icon" label="Export revenue data" onClick={exportRevenueTrend} />}
           </div>
           {isLoading
             ? <div className="h-24 bg-white/[0.03] rounded-xl animate-pulse" />

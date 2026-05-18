@@ -35,6 +35,8 @@ class ManualBookingCreate(BaseModel):
     """
 
     guest_name: str
+    guest_email: str | None = None
+    guest_phone: str | None = None
     room_id: int
     start_date: str   # YYYY-MM-DD
     end_date: str     # YYYY-MM-DD
@@ -70,6 +72,8 @@ class BookingResponse(BaseModel):
 
     id: int
     guest_name: str
+    guest_email: str | None = None
+    guest_phone: str | None = None
     room_id: int
     start_date: str
     end_date: str
@@ -87,5 +91,7 @@ class BookingStatusUpdate(BaseModel):
 class BookingUpdate(BaseModel):
     """Body for PATCH /api/admin/bookings/{id} — edit booking details."""
     guest_name: str | None = None
+    guest_email: str | None = None
+    guest_phone: str | None = None
     start_date: str | None = None   # YYYY-MM-DD
     end_date: str | None = None     # YYYY-MM-DD

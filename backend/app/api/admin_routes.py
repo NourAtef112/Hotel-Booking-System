@@ -28,6 +28,26 @@ from app.schemas.admin import (
 router = APIRouter()
 
 
+def _encode_guest(name: str, email: str | None, phone: str | None) -> str:
+    """Encode guest contact info into the special_requests field."""
+    return f"Manual booking for guest: {name}|{email or ''}|{phone or ''}"
+
+
+def _parse_guest(special_requests: str | None, user=None) -> tuple[str, str, str]:
+    """Return (name, email, phone) from special_requests. Backward-compatible."""
+    prefix = "Manual booking for guest: "
+    if special_requests and special_requests.startswith(prefix):
+        rest = special_requests[len(prefix):]
+        parts = rest.split("|")
+        name  = parts[0] if len(parts) > 0 else ""
+        email = parts[1] if len(parts) > 1 else ""
+        phone = parts[2] if len(parts) > 2 else ""
+        return name, email, phone
+    if user:
+        return user.full_name, "", ""
+    return "", "", ""
+
+
 async def _get_any_admin_id(session: AsyncSession) -> int:
     """Return the id of the first admin user in the DB (used as proxy owner)."""
     result = await session.execute(
@@ -80,17 +100,15 @@ async def get_all_bookings(
 
     results = []
     for b in bookings:
-        if b.special_requests and b.special_requests.startswith("Manual booking for guest: "):
-            guest_name = b.special_requests[len("Manual booking for guest: "):]
-        elif b.user:
-            guest_name = b.user.full_name
-        else:
-            guest_name = f"user_id:{b.user_id}"
-
+        name, email, phone = _parse_guest(b.special_requests, b.user)
+        if not name:
+            name = f"user_id:{b.user_id}"
         results.append(
             BookingResponse(
                 id=b.id,
-                guest_name=guest_name,
+                guest_name=name,
+                guest_email=email or None,
+                guest_phone=phone or None,
                 room_id=b.room_id,
                 start_date=str(b.check_in_date),
                 end_date=str(b.check_out_date),
@@ -164,7 +182,7 @@ async def create_manual_booking(
         "check_out_date": check_out,
         "total_price": 0.0,
         "status": "confirmed",
-        "special_requests": f"Manual booking for guest: {booking.guest_name}",
+        "special_requests": _encode_guest(booking.guest_name, booking.guest_email, booking.guest_phone),
     }
 
     new_booking = await repo.create_manual_booking(booking_data)
@@ -174,6 +192,8 @@ async def create_manual_booking(
     return BookingResponse(
         id=new_booking.id,
         guest_name=booking.guest_name,
+        guest_email=booking.guest_email or None,
+        guest_phone=booking.guest_phone or None,
         room_id=new_booking.room_id,
         start_date=str(new_booking.check_in_date),
         end_date=str(new_booking.check_out_date),
@@ -216,24 +236,27 @@ async def update_booking(
     if updated is None:
         raise HTTPException(status_code=404, detail="Booking not found")
 
-    # Update guest name in special_requests if provided
-    if payload.guest_name is not None:
-        updated.special_requests = f"Manual booking for guest: {payload.guest_name}"
+    # Update guest contact info in special_requests if any field changed
+    if payload.guest_name is not None or payload.guest_email is not None or payload.guest_phone is not None:
+        cur_name, cur_email, cur_phone = _parse_guest(updated.special_requests, getattr(updated, "user", None))
+        new_name  = payload.guest_name  if payload.guest_name  is not None else cur_name
+        new_email = payload.guest_email if payload.guest_email is not None else cur_email
+        new_phone = payload.guest_phone if payload.guest_phone is not None else cur_phone
+        updated.special_requests = _encode_guest(new_name, new_email, new_phone)
         await session.flush()
 
     await session.commit()
     await session.refresh(updated)
 
-    if updated.special_requests and updated.special_requests.startswith("Manual booking for guest: "):
-        guest_name = updated.special_requests[len("Manual booking for guest: "):]
-    elif updated.user:
-        guest_name = updated.user.full_name
-    else:
-        guest_name = f"user_id:{updated.user_id}"
+    name, email, phone = _parse_guest(updated.special_requests, getattr(updated, "user", None))
+    if not name:
+        name = f"user_id:{updated.user_id}"
 
     return BookingResponse(
         id=updated.id,
-        guest_name=guest_name,
+        guest_name=name,
+        guest_email=email or None,
+        guest_phone=phone or None,
         room_id=updated.room_id,
         start_date=str(updated.check_in_date),
         end_date=str(updated.check_out_date),
@@ -263,16 +286,15 @@ async def update_booking_status(
 
     await session.commit()
 
-    if updated.special_requests and updated.special_requests.startswith("Manual booking for guest: "):
-        guest_name = updated.special_requests[len("Manual booking for guest: "):]
-    elif updated.user:
-        guest_name = updated.user.full_name
-    else:
-        guest_name = f"user_id:{updated.user_id}"
+    name, email, phone = _parse_guest(updated.special_requests, getattr(updated, "user", None))
+    if not name:
+        name = f"user_id:{updated.user_id}"
 
     return BookingResponse(
         id=updated.id,
-        guest_name=guest_name,
+        guest_name=name,
+        guest_email=email or None,
+        guest_phone=phone or None,
         room_id=updated.room_id,
         start_date=str(updated.check_in_date),
         end_date=str(updated.check_out_date),

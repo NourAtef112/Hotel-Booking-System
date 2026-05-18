@@ -146,7 +146,7 @@ export default function AdminLayout() {
           <img
             src="/ejust_logo.png"
             alt="E-JUST Guest House"
-            className="w-16 h-16 object-contain drop-shadow-sm"
+            className="w-16 h-16 object-contain brightness-[0.25] dark:brightness-100 transition-[filter] duration-300"
           />
           <div>
             <span className="font-semibold text-white text-sm tracking-wide">E-JUST</span>
