@@ -1,7 +1,5 @@
 """
 booking_repository.py — Data access layer for Booking entities.
-El file da feeh: abstract interface (Protocol) + MockBookingRepository (in-memory).
-El PostgreSQL async functions baqa't commented out — hat3ada leh7ad ma el DB yetsa7a7.
 """
 
 from __future__ import annotations
@@ -9,6 +7,66 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Optional, Protocol, runtime_checkable
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.models import Booking
+
+
+# ── Async repository functions (real DB) ──────────────────────────────────────
+
+async def create(session: AsyncSession, data: dict) -> Booking:
+    booking = Booking(**data)
+    session.add(booking)
+    await session.flush()
+    await session.refresh(booking)
+    return booking
+
+
+async def find_by_id(session: AsyncSession, booking_id: int) -> Optional[Booking]:
+    result = await session.execute(select(Booking).where(Booking.id == booking_id))
+    return result.scalar_one_or_none()
+
+
+async def find_by_user_id(session: AsyncSession, user_id: int) -> list:
+    result = await session.execute(select(Booking).where(Booking.user_id == user_id))
+    return result.scalars().all()
+
+
+async def find_all(session: AsyncSession, page: int = 1, page_size: int = 20) -> list:
+    result = await session.execute(
+        select(Booking).offset((page - 1) * page_size).limit(page_size)
+    )
+    return result.scalars().all()
+
+
+async def find_overlapping(
+    session: AsyncSession,
+    room_id: int,
+    check_in: date,
+    check_out: date,
+) -> list:
+    result = await session.execute(
+        select(Booking).where(
+            Booking.room_id == room_id,
+            Booking.status.in_(["pending", "confirmed"]),
+            Booking.check_in < check_out,
+            Booking.check_out > check_in,
+        )
+    )
+    return result.scalars().all()
+
+
+async def update_status(
+    session: AsyncSession, booking_id: int, new_status: str
+) -> Optional[Booking]:
+    result = await session.execute(select(Booking).where(Booking.id == booking_id))
+    booking = result.scalar_one_or_none()
+    if booking is None:
+        return None
+    booking.status = new_status
+    await session.flush()
+    return booking
 
 
 # ── Domain dataclasses (used by mock layer until PostgreSQL is wired) ──────────
@@ -116,7 +174,6 @@ class MockBookingRepository:
         return [b for b in self._bookings if b.user_id == user_id]
 
     def update_payment_status(self, booking_id: int, status: str) -> None:
-        # ba3d el webhook, ne3del el booking status — law mesh mawgoud → ignore
         for b in self._bookings:
             if b.id == booking_id:
                 b.status = status

@@ -9,7 +9,7 @@ async def test_create_user_adds_and_returns_user(session):
     result = await user_repository.create_user(session, {
         "full_name": "Alice Smith",
         "email": "alice@example.com",
-        "password_hash": "hashed_pw",
+        "hashed_password": "hashed_pw",
         "role": "guest",
     })
     session.add.assert_called_once()

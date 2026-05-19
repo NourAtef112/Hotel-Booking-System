@@ -10,8 +10,8 @@ async def test_create_booking_adds_and_returns_booking(session):
     result = await booking_repository.create(session, {
         "user_id": 1,
         "room_id": 5,
-        "check_in_date": date(2025, 7, 1),
-        "check_out_date": date(2025, 7, 5),
+        "check_in": date(2025, 7, 1),
+        "check_out": date(2025, 7, 5),
         "total_price": 200.00,
         "status": "pending",
     })
@@ -67,7 +67,7 @@ async def test_find_all_returns_paginated_bookings(session):
 
 @pytest.mark.asyncio
 async def test_find_overlapping_returns_conflicts(session):
-    conflicting = [Booking(id=1, room_id=5, check_in_date=date(2025, 6, 1), check_out_date=date(2025, 6, 5))]
+    conflicting = [Booking(id=1, room_id=5, check_in=date(2025, 6, 1), check_out=date(2025, 6, 5))]
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = conflicting
     session.execute.return_value = mock_result

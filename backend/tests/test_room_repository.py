@@ -56,10 +56,8 @@ async def test_create_room_adds_and_returns_room(session):
     result = await room_repository.create(session, {
         "room_number": "101",
         "room_type": "single",
-        "capacity": 1,
         "price_per_night": 50.00,
         "status": "available",
-        "amenities": [],
     })
     session.add.assert_called_once()
     session.flush.assert_called_once()
@@ -70,7 +68,7 @@ async def test_create_room_adds_and_returns_room(session):
 
 @pytest.mark.asyncio
 async def test_update_room_returns_updated_room(session):
-    expected = Room(id=1, room_number="101", capacity=3)
+    expected = Room(id=1, room_number="101", status="booked")
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = expected
     session.execute.return_value = mock_result
