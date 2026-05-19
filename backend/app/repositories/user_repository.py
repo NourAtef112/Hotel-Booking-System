@@ -61,6 +61,14 @@ async def get_by_firebase_uid(session: AsyncSession, firebase_uid: str) -> Optio
 async def create_firebase_user(
     session: AsyncSession, firebase_uid: str, email: str, full_name: str
 ) -> User:
+    # Link firebase_uid to an existing email account rather than creating a duplicate.
+    existing = await get_by_email(session, email)
+    if existing:
+        stmt = update(User).where(User.id == existing.id).values(firebase_uid=firebase_uid)
+        await session.execute(stmt)
+        await session.flush()
+        await session.refresh(existing)
+        return existing
     user = User(
         firebase_uid=firebase_uid,
         email=email,
