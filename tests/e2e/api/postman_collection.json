@@ -1,0 +1,307 @@
+{
+  "info": {
+    "name": "University Guest Housing Booking System — API Validation",
+    "description": "Postman collection for validating Moamen's FastAPI endpoints.\n\nNOTE (BUG-001): Routes are mounted WITHOUT the /api prefix in backend/main.py.\nAll requests below use the actual deployed routes.\n\nBase URL: http://localhost:8000\nDo NOT commit postman_environment.json (excluded via .gitignore).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string",
+      "description": "Populated automatically by the Login request's test script"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "POST /auth/register and POST /auth/login",
+      "item": [
+        {
+          "name": "Register — Happy Path",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Ahmed Hassan\",\n  \"email\": \"ahmed@university.edu\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"student\",\n  \"university_id\": \"STU-2024-001\"\n}"
+            },
+            "description": "Register a new user.\nExpected: 201 + { message, user: { id, full_name, email, role, is_verified } }\nCurrent (stub): 500 Internal Server Error — BUG-002"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": \"Registration successful\",\n  \"user\": {\n    \"id\": 1,\n    \"full_name\": \"Ahmed Hassan\",\n    \"email\": \"ahmed@university.edu\",\n    \"role\": \"student\",\n    \"university_id\": \"STU-2024-001\",\n    \"is_verified\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register — Missing Fields (Edge Case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"No Email User\"\n}"
+            },
+            "description": "Missing email and password.\nExpected: 422 Unprocessable Entity (FastAPI validation)\nCurrent: 422 ✅ PASSES — FastAPI validates before stub runs"
+          },
+          "response": [
+            {
+              "name": "422 Unprocessable Entity",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"email\"],\n      \"msg\": \"Field required\"\n    },\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"password\"],\n      \"msg\": \"Field required\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register — Invalid Email Format (Edge Case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Bad Email\",\n  \"email\": \"not-an-email\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"guest\"\n}"
+            },
+            "description": "Invalid email format.\nExpected: 422 Unprocessable Entity\nCurrent: 422 ✅ PASSES"
+          }
+        },
+        {
+          "name": "Login — Happy Path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', body.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahmed@university.edu\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "description": "Authenticate and retrieve JWT token.\nExpected: 200 + { access_token, token_type: 'bearer', user }\nToken is saved to {{access_token}} collection variable.\nCurrent (stub): 500 — BUG-002"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"token_type\": \"bearer\",\n  \"user\": {\n    \"id\": 1,\n    \"full_name\": \"Ahmed Hassan\",\n    \"email\": \"ahmed@university.edu\",\n    \"role\": \"student\",\n    \"university_id\": \"STU-2024-001\",\n    \"is_verified\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login — Invalid Credentials (Edge Case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahmed@university.edu\",\n  \"password\": \"WrongPassword\"\n}"
+            },
+            "description": "Wrong password.\nExpected: 401 Unauthorized + { detail: 'Invalid email or password' }\nCurrent (stub): 500 — BUG-002"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "description": "GET /rooms/",
+      "item": [
+        {
+          "name": "List Rooms — Happy Path",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rooms/?page=1&page_size=10",
+              "host": ["{{base_url}}"],
+              "path": ["rooms", ""],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "10" }
+              ]
+            },
+            "description": "Return paginated room list.\nExpected: 200 + { rooms: [...], total, page, page_size }\nCurrent (stub): 500 — BUG-002"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"rooms\": [\n    {\n      \"id\": 1,\n      \"name\": \"Room 101\",\n      \"room_type\": \"single\",\n      \"capacity\": 1,\n      \"price_per_night\": 75.00,\n      \"status\": \"available\",\n      \"amenities\": [\"wifi\", \"ac\"],\n      \"description\": \"Comfortable single room.\",\n      \"image_url\": null\n    }\n  ],\n  \"total\": 1,\n  \"page\": 1,\n  \"page_size\": 10\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Rooms — Filter Available (Edge Case)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rooms/?available=true",
+              "host": ["{{base_url}}"],
+              "path": ["rooms", ""],
+              "query": [
+                { "key": "available", "value": "true" }
+              ]
+            },
+            "description": "Filter rooms by availability.\nExpected: 200 + rooms where status == 'available'\nCurrent (stub): 500 — BUG-002"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "description": "POST /bookings/, GET /bookings/, GET /bookings/{id}, DELETE /bookings/{id}",
+      "item": [
+        {
+          "name": "Create Booking — Happy Path",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": 1,\n  \"check_in_date\": \"2026-09-01\",\n  \"check_out_date\": \"2026-09-07\",\n  \"special_requests\": \"Late check-in requested\"\n}"
+            },
+            "description": "Create a new booking.\nExpected: 201 + BookingResponse with status 'pending'\nCurrent (stub): 500 — BUG-002"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": 1001,\n  \"user_id\": 1,\n  \"room_id\": 1,\n  \"check_in_date\": \"2026-09-01\",\n  \"check_out_date\": \"2026-09-07\",\n  \"total_price\": 450.00,\n  \"status\": \"pending\",\n  \"special_requests\": \"Late check-in requested\",\n  \"created_at\": \"2026-05-11T22:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Booking — Double Booking (Edge Case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_id\": 1,\n  \"check_in_date\": \"2026-09-01\",\n  \"check_out_date\": \"2026-09-07\"\n}"
+            },
+            "description": "Attempt to book a room that is already booked for overlapping dates.\nExpected: 409 Conflict + { detail: 'Room is no longer available for these dates' }\nCurrent (stub): 500 — BUG-002"
+          }
+        },
+        {
+          "name": "Create Booking — Missing Fields (Edge Case)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"check_in_date\": \"2026-09-01\"\n}"
+            },
+            "description": "Missing room_id and check_out_date.\nExpected: 422 Unprocessable Entity\nCurrent: 422 ✅ PASSES"
+          }
+        },
+        {
+          "name": "Get User Bookings (History) — Happy Path",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/",
+            "description": "List all bookings for the authenticated user.\nExpected: 200 + { bookings: [...], total }\nCurrent (stub): 500 — BUG-002"
+          }
+        },
+        {
+          "name": "Get Booking by ID — Happy Path",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/1",
+            "description": "Get a specific booking by ID.\nExpected: 200 + BookingResponse\nCurrent (stub): 500 — BUG-002"
+          }
+        },
+        {
+          "name": "Get Booking by ID — Not Found (Edge Case)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/99999999",
+            "description": "Non-existent booking ID.\nExpected: 404 Not Found + { detail: 'Booking not found' }\nCurrent (stub): 500 — BUG-002"
+          }
+        },
+        {
+          "name": "Cancel Booking — Happy Path",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": "{{base_url}}/bookings/1",
+            "description": "Cancel a booking by ID.\nExpected: 204 No Content\nCurrent: 204 ✅ PASSES — stub returns None, valid for 204"
+          }
+        },
+        {
+          "name": "Cancel Booking — Unauthorized (Edge Case)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/bookings/1",
+            "description": "Attempt cancellation without auth token.\nExpected: 401 Unauthorized\nCurrent (stub): 204 — BUG-003 (no auth middleware)"
+          }
+        }
+      ]
+    }
+  ]
+}
