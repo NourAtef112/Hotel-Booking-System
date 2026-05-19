@@ -111,6 +111,7 @@ android/local.properties
 
 # Claude Code / Ruflo plugin system (auto-generated)
 .agents/
+.claude/
 claude.md
 skills-lock.json
 .env
