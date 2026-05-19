@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_HOURS: int = 24
 
     # CORS
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8081"]
+    ALLOWED_ORIGINS: list[str] = ["*"]
 
     # Firebase Auth
     FIREBASE_PROJECT_ID: str = ""
