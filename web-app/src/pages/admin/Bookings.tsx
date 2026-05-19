@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import CustomSelect from '../../components/CustomSelect'
 import DatePicker from '../../components/DatePicker'
 import ExportButton from '../../components/ExportButton'
+import PhoneInput from '../../components/PhoneInput'
 import { exportBookingsExcel } from '../../lib/exportExcel'
 import {
   useAdminBookings,
@@ -71,6 +72,119 @@ const ROOM_TYPE_COLOR: Record<string, string> = {
 
 const emptyBookingForm: ManualBookingCreate = { guest_name: '', guest_email: '', guest_phone: '', room_id: 0, start_date: '', end_date: '' }
 type BookingFormErrors = Partial<Record<keyof ManualBookingCreate, string>>
+
+// ─── Room Picker ──────────────────────────────────────────────────────────────
+
+function RoomPickerSelect({
+  rooms,
+  value,
+  onChange,
+  unavailableIds = new Set(),
+}: {
+  rooms: Room[]
+  value: number
+  onChange: (id: number) => void
+  unavailableIds?: Set<number>
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  const selected = rooms.find((r) => r.id === value)
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className={`flex items-center gap-3 w-full bg-white/[0.04] border rounded-xl px-4 py-2.5 text-sm transition-all duration-200 text-left ${
+          open
+            ? 'border-primary/50 bg-white/[0.06]'
+            : 'border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.06]'
+        }`}
+      >
+        {selected ? (
+          <>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ROOM_TYPE_COLOR[selected.type] ?? '#B30000' }} />
+            <span className="flex-1 text-white font-medium">
+              Room {selected.room_number}
+              <span className="ml-2 text-white/35 font-normal capitalize">
+                {selected.type} · {fmtEGP(selected.price_per_night)}/night
+              </span>
+            </span>
+          </>
+        ) : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/25 shrink-0">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span className="text-white/25">Select a room…</span>
+          </>
+        )}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          className={`ml-auto shrink-0 text-white/30 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      <div
+        className={`absolute z-50 top-full left-0 mt-1.5 w-full dropdown-panel rounded-xl overflow-y-auto transition-all duration-200 origin-top ${
+          open
+            ? 'opacity-100 scale-y-100 pointer-events-auto'
+            : 'opacity-0 scale-y-95 -translate-y-1 pointer-events-none'
+        }`}
+        style={{ maxHeight: '240px' }}
+      >
+        {rooms.length === 0 ? (
+          <div className="px-4 py-4 text-sm text-white/30 text-center">No rooms available</div>
+        ) : (
+          rooms.map((room) => {
+            const booked = unavailableIds.has(room.id)
+            const isSel = room.id === value
+            return (
+              <button
+                key={room.id}
+                type="button"
+                disabled={booked}
+                onClick={() => { onChange(room.id); setOpen(false) }}
+                className={`w-full text-left px-4 py-3 text-sm transition-colors duration-150 flex items-center gap-3 ${
+                  booked
+                    ? 'opacity-30 cursor-not-allowed'
+                    : isSel
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-white/70 hover:text-white hover:bg-white/[0.08]'
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: ROOM_TYPE_COLOR[room.type] ?? '#B30000' }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium leading-tight">Room {room.room_number}</p>
+                  <p className="text-[11px] text-white/35 capitalize leading-tight mt-0.5">
+                    {room.type} · {fmtEGP(room.price_per_night)}/night
+                    {booked ? ' · Already booked' : ''}
+                  </p>
+                </div>
+                {isSel && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary shrink-0">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                )}
+              </button>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
 
 // ─── Status Flow Bar ─────────────────────────────────────────────────────────
 
@@ -344,12 +458,9 @@ function BookingDetailModal({
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-white/30 font-medium mb-2.5">Mobile Number</p>
-                  <input
-                    type="tel"
+                  <PhoneInput
                     value={guestPhone}
-                    onChange={(e) => setForm((f) => ({ ...f, guest_phone: e.target.value }))}
-                    className={inputCls}
-                    placeholder="+20 1XX XXX XXXX"
+                    onChange={(val) => setForm((f) => ({ ...f, guest_phone: val }))}
                   />
                 </div>
               </div>
@@ -497,6 +608,9 @@ function BookingDetailModal({
 function SkeletonRow() {
   return (
     <tr>
+      <td className="pl-5 pr-2 py-4 w-10">
+        <div className="w-3.5 h-3.5 bg-white/[0.06] rounded animate-pulse" />
+      </td>
       {Array.from({ length: 7 }).map((_, i) => (
         <td key={i} className="px-5 py-4">
           <div className="h-3.5 bg-white/[0.06] rounded-full animate-pulse" style={{ width: `${55 + (i * 17) % 40}%` }} />
@@ -532,9 +646,24 @@ export default function Bookings() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<ManualBookingCreate>(emptyBookingForm)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+
+  const unavailableRoomIds = useMemo(() => {
+    if (!form.start_date || !form.end_date) return new Set<number>()
+    const busy = new Set<number>()
+    for (const b of bookings ?? []) {
+      if (b.status !== 'pending' && b.status !== 'confirmed') continue
+      if (b.start_date < form.end_date && b.end_date > form.start_date) busy.add(b.room_id)
+    }
+    return busy
+  }, [bookings, form.start_date, form.end_date])
   const [formErrors, setFormErrors] = useState<BookingFormErrors>({})
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 15
 
   async function exportBookings() {
     const today = new Date().toISOString().split('T')[0]
@@ -570,8 +699,58 @@ export default function Bookings() {
   const filtered = (bookings ?? []).filter((b) => {
     const matchSearch = b.guest_name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = !statusFilter || b.status === statusFilter
-    return matchSearch && matchStatus
+    const matchFrom = !dateFrom || b.start_date >= dateFrom
+    const matchTo   = !dateTo   || b.start_date <= dateTo
+    return matchSearch && matchStatus && matchFrom && matchTo
   })
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage   = Math.min(page, totalPages)
+  const paginated  = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const pageIds = new Set(paginated.map(b => b.id))
+  const allPageSelected = pageIds.size > 0 && [...pageIds].every(id => selectedIds.has(id))
+  const somePageSelected = [...pageIds].some(id => selectedIds.has(id))
+
+  function toggleSelectAll() {
+    if (allPageSelected) {
+      setSelectedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.delete(id)); return next })
+    } else {
+      setSelectedIds(prev => { const next = new Set(prev); pageIds.forEach(id => next.add(id)); return next })
+    }
+  }
+
+  function toggleSelectOne(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  async function bulkConfirm() {
+    const ids = [...selectedIds].filter(id => {
+      const b = (bookings ?? []).find(x => x.id === id)
+      return b && (b.status === 'pending' || b.status === 'cancelled')
+    })
+    await Promise.allSettled(ids.map(id => updateStatus.mutateAsync({ id, status: 'confirmed' })))
+    setSelectedIds(new Set())
+  }
+
+  async function bulkCancel() {
+    const ids = [...selectedIds].filter(id => {
+      const b = (bookings ?? []).find(x => x.id === id)
+      return b && (b.status === 'pending' || b.status === 'confirmed')
+    })
+    await Promise.allSettled(ids.map(id => updateStatus.mutateAsync({ id, status: 'cancelled' })))
+    setSelectedIds(new Set())
+  }
+
+  async function exportSelected() {
+    const sel = (bookings ?? []).filter(b => selectedIds.has(b.id))
+    const today = new Date().toISOString().split('T')[0]
+    await exportBookingsExcel(sel, roomMap, `ejust-selected-${today}`)
+  }
 
   return (
     <div className="space-y-6">
@@ -631,31 +810,95 @@ export default function Bookings() {
       )}
 
       {/* Search & filter */}
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
-          >
+      <div className="flex flex-wrap gap-3">
+        {/* Guest name search */}
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none">
             <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
           </svg>
-          <input
-            type="text"
-            placeholder="Search by guest name…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+          <input type="text" placeholder="Search by guest name…" value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-primary/50 focus:bg-white/[0.06] transition-all"
           />
         </div>
-        <CustomSelect value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} className="w-44" />
+
+        {/* Status filter */}
+        <CustomSelect value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1) }} options={STATUS_OPTIONS} className="w-40" />
+
+        {/* Date-range filter */}
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={dateFrom}
+            onChange={(val) => { setDateFrom(val); setPage(1) }}
+            placeholder="From date"
+            className="w-40"
+          />
+          <span className="text-white/20 text-xs">to</span>
+          <DatePicker
+            value={dateTo}
+            onChange={(val) => { setDateTo(val); setPage(1) }}
+            placeholder="To date"
+            min={dateFrom || undefined}
+            className="w-40"
+          />
+          {(dateFrom || dateTo) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); setPage(1) }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/30 hover:text-white/60 transition-all border border-white/[0.06]"
+              title="Clear dates">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/[0.07] border border-primary/20">
+          <span className="text-sm font-medium text-primary">{selectedIds.size} selected</span>
+          <div className="w-px h-5 bg-white/[0.10]" />
+          <button
+            onClick={bulkConfirm}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Confirm All
+          </button>
+          <button
+            onClick={bulkCancel}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Cancel All
+          </button>
+          <button
+            onClick={exportSelected}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white/50 bg-white/[0.05] border border-white/[0.09] hover:bg-white/[0.10] transition-all"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export Selected
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto text-xs text-white/30 hover:text-white/60 transition-colors"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="glass rounded-2xl overflow-hidden shadow-glass">
         <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
           <span className="text-sm font-medium text-white/60">All Reservations</span>
           <span className="text-xs text-white/25">
-            {bookings ? `${filtered.length} of ${bookings.length} records` : '—'}
+            {bookings
+              ? filtered.length < (bookings.length)
+                ? `${filtered.length} filtered · ${bookings.length} total`
+                : `${bookings.length} records`
+              : '—'}
           </span>
         </div>
 
@@ -663,6 +906,16 @@ export default function Bookings() {
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-white/[0.05]">
+                {/* Select-all checkbox */}
+                <th className="pl-5 pr-2 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected }}
+                    onChange={toggleSelectAll}
+                    className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                  />
+                </th>
                 {['ID', 'Guest Name', 'Room', 'Check-in', 'Check-out', 'Status', 'Actions'].map((h) => (
                   <th key={h} className="px-5 py-3 text-left text-[11px] font-medium text-white/30 uppercase tracking-wider whitespace-nowrap">
                     {h}
@@ -673,54 +926,117 @@ export default function Bookings() {
             <tbody className="divide-y divide-white/[0.04]">
               {isLoading ? (
                 <><SkeletonRow /><SkeletonRow /><SkeletonRow /></>
-              ) : filtered.length > 0 ? (
-                filtered.map((booking) => {
+              ) : paginated.length > 0 ? (
+                paginated.map((booking) => {
                   const st = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending
                   const isPendingUpdate =
                     updateStatus.isPending &&
                     (updateStatus.variables as { id: number } | undefined)?.id === booking.id
                   const isSelected = selectedBooking?.id === booking.id
+                  const room = roomMap.get(booking.room_id)
 
                   return (
                     <tr
                       key={booking.id}
                       onClick={() => setSelectedBooking(booking)}
-                      className={`hover:bg-white/[0.03] transition-colors group cursor-pointer ${isSelected ? 'bg-white/[0.04]' : ''}`}
+                      className={`hover:bg-white/[0.025] transition-colors cursor-pointer ${isSelected ? 'bg-primary/[0.04] border-l-2 border-primary/30' : selectedIds.has(booking.id) ? 'bg-white/[0.02]' : ''}`}
                     >
-                      <td className="px-5 py-4 text-xs font-mono text-white/30">#{booking.id}</td>
-                      <td className="px-5 py-4 text-sm font-medium text-white">{booking.guest_name}</td>
-                      <td className="px-5 py-4 text-sm text-white/50">
-                        {roomMap.get(booking.room_id)
-                          ? `Room ${roomMap.get(booking.room_id)!.room_number}`
-                          : `Room ${booking.room_id}`}
+                      <td className="pl-5 pr-2 py-3.5 w-10" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(booking.id)}
+                          onChange={() => toggleSelectOne(booking.id)}
+                          className="w-3.5 h-3.5 rounded accent-primary cursor-pointer"
+                        />
                       </td>
-                      <td className="px-5 py-4 text-sm text-white/50 whitespace-nowrap">{booking.start_date}</td>
-                      <td className="px-5 py-4 text-sm text-white/50 whitespace-nowrap">{booking.end_date}</td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${st.className}`}>
-                          <span className="w-1 h-1 rounded-full bg-current" />
+                      <td className="px-5 py-3.5 text-xs font-mono text-white/30">#{booking.id}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary text-[10px] font-bold shrink-0">
+                            {booking.guest_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white leading-tight">{booking.guest_name}</p>
+                            {booking.guest_email && (
+                              <p className="text-[11px] text-white/30 leading-tight">{booking.guest_email}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="text-sm text-white/70 font-medium">
+                          {room ? `Room ${room.room_number}` : `Room ${booking.room_id}`}
+                        </div>
+                        {room && <div className="text-[11px] text-white/30 capitalize">{room.type}</div>}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-white/50 whitespace-nowrap">{booking.start_date}</td>
+                      <td className="px-5 py-3.5 text-sm text-white/50 whitespace-nowrap">{booking.end_date}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${st.className}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
                           {st.label}
                         </span>
                       </td>
-                      <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {booking.status !== 'confirmed' && booking.status !== 'completed' && (
+                      <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
+                          {/* View details */}
+                          <button
+                            onClick={() => setSelectedBooking(booking)}
+                            title="View details"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-white/40 bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] hover:text-white/70 transition-all"
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            View
+                          </button>
+
+                          {/* Confirm / Re-confirm */}
+                          {(booking.status === 'pending' || booking.status === 'cancelled') && (
                             <button
                               disabled={isPendingUpdate}
                               onClick={() => handleStatusChange(booking.id, 'confirmed')}
-                              className="px-3 py-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                              {isPendingUpdate ? '…' : 'Confirm'}
+                              {isPendingUpdate ? (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                              ) : (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                              )}
+                              {booking.status === 'cancelled' ? 'Re-confirm' : 'Confirm'}
                             </button>
                           )}
-                          {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+
+                          {/* Mark completed */}
+                          {booking.status === 'confirmed' && (
+                            <button
+                              disabled={isPendingUpdate}
+                              onClick={() => handleStatusChange(booking.id, 'completed')}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-white/50 bg-white/[0.05] border border-white/[0.09] hover:bg-white/[0.10] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                              Complete
+                            </button>
+                          )}
+
+                          {/* Cancel */}
+                          {(booking.status === 'pending' || booking.status === 'confirmed') && (
                             <button
                               disabled={isPendingUpdate}
                               onClick={() => handleStatusChange(booking.id, 'cancelled')}
-                              className="px-3 py-1 text-[11px] font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                              {isPendingUpdate ? '…' : 'Cancel'}
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                              Cancel
                             </button>
+                          )}
+
+                          {/* Completed badge */}
+                          {booking.status === 'completed' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-white/25 bg-white/[0.03] border border-white/[0.05]">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                              Done
+                            </span>
                           )}
                         </div>
                       </td>
@@ -729,14 +1045,20 @@ export default function Bookings() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
+                  <td colSpan={8} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-white/15">
                         <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
                       </svg>
                       <p className="text-sm text-white/25">
-                        {search || statusFilter ? 'No bookings match your filters' : 'No bookings found'}
+                        {search || statusFilter || dateFrom || dateTo ? 'No bookings match your filters' : 'No bookings found'}
                       </p>
+                      {(search || statusFilter || dateFrom || dateTo) && (
+                        <button onClick={() => { setSearch(''); setStatusFilter(''); setDateFrom(''); setDateTo('') }}
+                          className="text-xs text-primary/70 hover:text-primary transition-colors">
+                          Clear all filters
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -745,6 +1067,55 @@ export default function Bookings() {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {!isLoading && filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-white/30">
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={safePage === 1}
+              onClick={() => setPage(safePage - 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.07] text-white/40 hover:bg-white/[0.08] hover:text-white/70 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+              .reduce<(number | '…')[]>((acc, p, idx, arr) => {
+                if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('…')
+                acc.push(p)
+                return acc
+              }, [])
+              .map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-white/20">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p as number)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-all border ${
+                      p === safePage
+                        ? 'bg-primary text-white border-primary/50 shadow-glow-sm'
+                        : 'bg-white/[0.04] border-white/[0.07] text-white/40 hover:bg-white/[0.08] hover:text-white/70'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <button
+              disabled={safePage === totalPages}
+              onClick={() => setPage(safePage + 1)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.07] text-white/40 hover:bg-white/[0.08] hover:text-white/70 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Booking detail modal */}
       <BookingDetailModal
@@ -793,11 +1164,19 @@ export default function Bookings() {
                 <input type="email" value={form.guest_email ?? ''} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} placeholder="guest@example.com" className={inputClass} />
               </InputField>
               <InputField label="Mobile Number">
-                <input type="tel" value={form.guest_phone ?? ''} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} placeholder="+20 1XX XXX XXXX" className={inputClass} />
+                <PhoneInput
+                  value={form.guest_phone ?? ''}
+                  onChange={(val) => setForm({ ...form, guest_phone: val })}
+                />
               </InputField>
             </div>
-            <InputField label="Room ID" error={formErrors.room_id}>
-              <input type="number" min={1} value={form.room_id || ''} onChange={(e) => setForm({ ...form, room_id: parseInt(e.target.value) || 0 })} placeholder="e.g. 3" className={inputClass} />
+            <InputField label="Room" error={formErrors.room_id}>
+              <RoomPickerSelect
+                rooms={rooms}
+                value={form.room_id}
+                onChange={(id) => setForm({ ...form, room_id: id })}
+                unavailableIds={unavailableRoomIds}
+              />
             </InputField>
             <div className="grid grid-cols-2 gap-4">
               <InputField label="Check-in" error={formErrors.start_date}>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNotifications } from '../contexts/NotificationContext'
 import { adminApi } from '../lib/apiClient'
-import type { Booking, BookingStatus, BookingUpdate, ManualBookingCreate, Room, RoomCreate } from '../types/admin'
+import type { Booking, BookingStatus, BookingUpdate, ManualBookingCreate, Room, RoomCreate, RoomUpdate } from '../types/admin'
 
 const ROOMS_KEY = ['admin', 'rooms'] as const
 const BOOKINGS_KEY = ['admin', 'bookings'] as const
@@ -108,6 +108,55 @@ export function useUpdateBooking() {
 
     onSettled: () => {
       qc.invalidateQueries({ queryKey: BOOKINGS_KEY })
+    },
+  })
+}
+
+export function useUpdateRoom() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: RoomUpdate }) =>
+      adminApi.updateRoom(id, data).then((r) => r.data),
+
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: ROOMS_KEY })
+      const snapshot = qc.getQueryData<Room[]>(ROOMS_KEY)
+      qc.setQueryData<Room[]>(ROOMS_KEY, (old = []) =>
+        old.map((r) => (r.id === id ? { ...r, ...data } : r)),
+      )
+      return { snapshot }
+    },
+
+    onError: (_err, _vars, ctx) => {
+      qc.setQueryData(ROOMS_KEY, ctx?.snapshot)
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ROOMS_KEY })
+    },
+  })
+}
+
+export function useDeleteRoom() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => adminApi.deleteRoom(id),
+
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ROOMS_KEY })
+      const snapshot = qc.getQueryData<Room[]>(ROOMS_KEY)
+      qc.setQueryData<Room[]>(ROOMS_KEY, (old = []) => old.filter((r) => r.id !== id))
+      return { snapshot }
+    },
+
+    onError: (_err, _vars, ctx) => {
+      qc.setQueryData(ROOMS_KEY, ctx?.snapshot)
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ROOMS_KEY })
     },
   })
 }
