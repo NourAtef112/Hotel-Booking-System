@@ -1,65 +1,117 @@
 # E-JUST Guest House — Admin Dashboard
-## Technical Report
+## Technical Report — Version 2
 
 | Field | Value |
 |---|---|
 | **Project** | Hotel Booking System |
 | **Component** | Admin Dashboard (Web Application) |
-| **Branch** | `feature/admin-dashboard-web` |
+| **Branch** | `feature/admin-dashboard-web` → `master` |
 | **Institution** | Egypt-Japan University of Science & Technology |
 
 ---
 
 ## Abstract
 
-This report documents the design, architecture, and implementation of the E-JUST Guest House Admin Dashboard — a modern, full-stack web application enabling administrators to manage room bookings, monitor revenue, handle guest information, and export structured reports. The system comprises a React 18 single-page application backed by a FastAPI/PostgreSQL REST API, communicating over a typed Axios client. Key deliverables include real-time booking management, animated analytics charts, light/dark theming, guest contact collection (name, email, mobile), and styled Excel export powered by ExcelJS.
+This report documents the design, architecture, and implementation of the E-JUST Guest House Admin Dashboard — a modern, full-stack web application enabling administrators to manage room bookings, monitor revenue, handle guest information, and export structured reports.
+
+Version 2 extends the original dashboard with six major operational additions: an **Occupancy Calendar** with variable-width today highlighting, a **Guest Directory** derived from booking history, a **Housekeeping Kanban Board** with HTML5 drag-and-drop, and **Bulk Booking Actions** with multi-select and batch status updates. Three new shared UI components were also introduced: a custom **DatePicker**, a **PhoneInput** with live country-code validation, and a **RoomPickerSelect** that prevents double-booking at the point of entry. Interactive click-through modals were added to the Today's Agenda widget and the Rooms inventory table.
 
 ---
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)
-2. [Architecture Overview](#2-architecture-overview)
-3. [Data Model](#3-data-model)
-4. [REST API Reference](#4-rest-api-reference)
-5. [Frontend Modules](#5-frontend-modules)
-   - [Application Shell](#51-application-shell)
-   - [Overview Page](#52-overview-page)
-   - [Bookings Page](#53-bookings-page)
-   - [Rooms Page](#54-rooms-page)
-6. [ExportButton Component](#6-exportbutton-component)
-7. [Excel Export System](#7-excel-export-system)
-8. [Known Limitations & Future Work](#8-known-limitations--future-work)
-9. [Conclusion](#9-conclusion)
-10. [Appendix A — File Structure](#appendix-a--file-structure)
-11. [Appendix B — Environment Configuration](#appendix-b--environment-configuration)
+1. [What's New in Version 2](#1-whats-new-in-version-2)
+2. [Introduction](#2-introduction)
+3. [Architecture Overview](#3-architecture-overview)
+4. [Data Model](#4-data-model)
+5. [REST API Reference](#5-rest-api-reference)
+6. [New Operational Modules (v2)](#6-new-operational-modules-v2)
+   - [Occupancy Calendar](#61-occupancy-calendar)
+   - [Guest Directory](#62-guest-directory)
+   - [Housekeeping Board](#63-housekeeping-board)
+   - [Bulk Booking Actions](#64-bulk-booking-actions)
+7. [New Shared UI Components (v2)](#7-new-shared-ui-components-v2)
+   - [DatePicker](#71-datepicker)
+   - [PhoneInput](#72-phoneinput)
+   - [RoomPickerSelect](#73-roompickerselect)
+   - [AgendaPreviewModal](#74-agendapreviewmodal)
+   - [RoomDetailModal](#75-roomdetailmodal)
+8. [Frontend Modules (Existing Pages)](#8-frontend-modules-existing-pages)
+   - [Application Shell](#81-application-shell)
+   - [Overview Page](#82-overview-page)
+   - [Bookings Page (updated)](#83-bookings-page-updated)
+   - [Rooms Page (updated)](#84-rooms-page-updated)
+9. [Shared Infrastructure](#9-shared-infrastructure)
+10. [Excel Export System](#10-excel-export-system)
+11. [Known Limitations & Future Work](#11-known-limitations--future-work)
+12. [Conclusion](#12-conclusion)
+13. [Appendix A — File Structure](#appendix-a--file-structure)
+14. [Appendix B — Environment Configuration](#appendix-b--environment-configuration)
 
 ---
 
-## 1. Introduction
+## 1. What's New in Version 2
 
-### 1.1 Project Context
+Version 2 of the Admin Dashboard introduces six major features and four new shared UI components, all merged into the `master` branch.
+
+### 1.1 New Pages
+
+| Page | Route | Description |
+|---|---|---|
+| Occupancy Calendar | `/admin/calendar` | Month-view room × day grid |
+| Guest Directory | `/admin/guests` | Aggregated guest records from bookings |
+| Housekeeping Board | `/admin/housekeeping` | Kanban with HTML5 drag-and-drop |
+
+### 1.2 New Shared Components
+
+| Component | Purpose |
+|---|---|
+| `DatePicker` | Unified custom date picker replacing native `<input type="date">` |
+| `PhoneInput` | Country-code picker + digit-length validation for 20 countries |
+| `RoomPickerSelect` | Rich room dropdown that excludes rooms with overlapping bookings |
+| `AgendaPreviewModal` | Booking detail overlay triggered from Today's Agenda |
+| `RoomDetailModal` | Room statistics overlay triggered from Rooms inventory table |
+
+### 1.3 Enhancements to Existing Pages
+
+- **Bookings page**:
+  - Date-range filter bar (previously a known limitation — now resolved).
+  - Bulk selection with header checkbox (indeterminate state), floating action bar: *Confirm All*, *Cancel All*, *Export Selected*.
+  - Room picker dropdown replaces the raw numeric room-ID input.
+  - `PhoneInput` component in both the new-booking form and the booking detail modal.
+- **Overview page**: Guest rows in Today's Agenda are now clickable, opening `AgendaPreviewModal` with full booking details, cost, and contact links.
+- **Rooms page**: Room rows are now clickable, opening `RoomDetailModal` with occupancy stats, upcoming reservations list, revenue total, and shortcuts to Edit or Remove.
+- **Sidebar**: Calendar, Guests, and Housekeeping navigation items added with distinct SVG icons.
+
+---
+
+## 2. Introduction
+
+### 2.1 Project Context
 
 The E-JUST Guest House (officially the University Guest Housing Booking System) is an institutional accommodation platform for Egypt-Japan University of Science and Technology. It provides a guest-facing booking portal and a dedicated admin-only dashboard for managing the full lifecycle of room reservations.
 
 This report focuses exclusively on the **Admin Dashboard** — the management interface accessible only to authorised staff. It covers the product scope, technical architecture, individual feature modules, data models, API contract, and the decisions made during development.
 
-### 1.2 Goals and Scope
+### 2.2 Goals and Scope
 
 The Admin Dashboard was designed to satisfy the following requirements:
 
 1. **Unified overview** — a single-screen summary of all key metrics (total bookings, occupancy rate, revenue pipeline, pending approvals, today's check-in/check-out schedule) with animated visualisations.
-2. **Booking management** — list, search, filter, create, edit, and update the status of reservations; capture full guest contact details.
-3. **Room management** — view the room inventory and create new rooms with type classification and pricing.
-4. **Data export** — generate styled `.xlsx` workbooks for reservations, monthly booking counts, and revenue trends.
-5. **Real-time UX** — optimistic UI updates, smooth CSS transitions, and skeleton loading states throughout.
-6. **Adaptive theming** — full dark-mode and light-mode support with a shared brand colour scheme.
+2. **Booking management** — list, search, filter, create, edit, and update the status of reservations; capture full guest contact details; bulk-confirm or bulk-cancel selected reservations.
+3. **Room management** — view the room inventory and create new rooms with type classification and pricing; inspect per-room statistics.
+4. **Occupancy planning** — a month-view calendar grid showing which rooms are booked on which days, with status-colour coding and interactive booking popups.
+5. **Guest intelligence** — a searchable directory of unique guests derived from booking history, with expandable stay records and revenue totals.
+6. **Housekeeping operations** — a drag-and-drop Kanban board that tracks the cleaning status of each room throughout the day, seeded automatically from that day's checkouts.
+7. **Data export** — generate styled `.xlsx` workbooks for reservations, monthly booking counts, revenue trends, and ad-hoc selected-booking subsets.
+8. **Real-time UX** — optimistic UI updates, smooth CSS transitions, and skeleton loading states throughout.
+9. **Adaptive theming** — full dark-mode and light-mode support with a shared brand colour scheme.
 
 ---
 
-## 2. Architecture Overview
+## 3. Architecture Overview
 
-### 2.1 High-Level Architecture
+### 3.1 High-Level Architecture
 
 The system follows a classic client–server separation:
 
@@ -72,7 +124,7 @@ The system follows a classic client–server separation:
 
 The frontend is served on port **5173** (Vite dev server) and communicates with the backend on port **8003** via a typed REST API. All admin routes are mounted at the `/api/admin` prefix in the FastAPI application.
 
-### 2.2 Frontend Stack
+### 3.2 Frontend Stack
 
 | Package | Version | Role |
 |---|---|---|
@@ -86,7 +138,7 @@ The frontend is served on port **5173** (Vite dev server) and communicates with 
 
 Custom Tailwind design tokens (brand red `#B30000`, glassmorphism helpers) are defined in `tailwind.config.js`.
 
-### 2.3 Backend Stack
+### 3.3 Backend Stack
 
 | Package | Role |
 |---|---|
@@ -96,7 +148,7 @@ Custom Tailwind design tokens (brand red `#B30000`, glassmorphism helpers) are d
 | PostgreSQL | Relational database; GiST exclusion constraint prevents double-bookings |
 | Uvicorn | ASGI server |
 
-### 2.4 Request Lifecycle
+### 3.4 Request Lifecycle
 
 A typical admin action (e.g. confirming a booking) follows this path:
 
@@ -109,9 +161,9 @@ A typical admin action (e.g. confirming a booking) follows this path:
 
 ---
 
-## 3. Data Model
+## 4. Data Model
 
-### 3.1 `rooms` Table
+### 4.1 `rooms` Table
 
 | Column | Type | Nullable | Notes |
 |---|---|---|---|
@@ -123,7 +175,7 @@ A typical admin action (e.g. confirming a booking) follows this path:
 | `is_active` | `BOOLEAN` | NO | Soft-delete flag |
 | `created_at` | `TIMESTAMPTZ` | NO | Server default |
 
-### 3.2 `bookings` Table
+### 4.2 `bookings` Table
 
 | Column | Type | Nullable | Notes |
 |---|---|---|---|
@@ -148,7 +200,7 @@ A typical admin action (e.g. confirming a booking) follows this path:
 >
 > The backend helper `_parse_guest()` splits on `|` and is backward-compatible with old records that only contain the name segment. New records written by `_encode_guest()` always include all three fields (empty string when not provided).
 
-### 3.3 API Schemas (Pydantic)
+### 4.3 API Schemas (Pydantic)
 
 **BookingResponse**
 ```python
@@ -187,20 +239,22 @@ class BookingUpdate(BaseModel):
 
 ---
 
-## 4. REST API Reference
+## 5. REST API Reference
 
 All admin endpoints are mounted at `/api/admin` and require no authentication token in the current development build.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/admin/rooms` | Return list of active rooms (paginated) |
-| `POST` | `/api/admin/rooms` | Create a new room (number, type, price) |
+| `GET` | `/api/admin/rooms` | Return list of active rooms |
+| `POST` | `/api/admin/rooms` | Create a new room |
+| `PATCH` | `/api/admin/rooms/{id}` | Edit room number, type, or price |
+| `DELETE` | `/api/admin/rooms/{id}` | Soft-delete a room (`is_active = false`) |
 | `GET` | `/api/admin/bookings` | Return all bookings with guest info decoded |
 | `POST` | `/api/admin/bookings/manual` | Create a booking on behalf of a guest |
 | `PATCH` | `/api/admin/bookings/{id}` | Edit guest name, email, phone, or dates |
 | `PATCH` | `/api/admin/bookings/{id}/status` | Transition booking status |
 
-### 4.1 Status Transition Rules
+### 5.1 Status Transition Rules
 
 | Current Status | Allowed Transitions |
 |---|---|
@@ -211,15 +265,272 @@ All admin endpoints are mounted at `/api/admin` and require no authentication to
 
 ---
 
-## 5. Frontend Modules
+## 6. New Operational Modules (v2)
 
-### 5.1 Application Shell
+### 6.1 Occupancy Calendar
+
+#### Overview
+
+The Calendar page (`/admin/calendar`) provides a month-view occupancy grid. Rooms are displayed as sticky left-column rows; each of the month's days occupies a column that scrolls horizontally. Booking blocks span their full date range and are colour-coded by status.
+
+#### Grid Layout
+
+| Dimension | Value | Notes |
+|---|---|---|
+| Normal day column | 72 px | `DAY_W` constant |
+| Today column | 108 px | Wider to make the current day prominent |
+| Row height | 56 px | `ROW_H` constant |
+| Room label column | 168 px | Sticky; alternating `#111`/`#0d0d0d` |
+
+The total grid width is computed dynamically as `LEFT_W + Σ dayW(d)` for each day `d` in the month, where `dayW(d)` returns `TODAY_W` for today and `DAY_W` for every other day.
+
+#### Today Column
+
+The today column is 50% wider than a normal day (108 px vs. 72 px). Its header displays:
+- The abbreviated day-of-week name.
+- The date number inside a larger red circle with a glow shadow (`0 0 12px rgba(179,0,0,0.5)`).
+- A small *"Today"* label below the number.
+
+Body cells in the today column have a stronger red tint (`rgba(179,0,0,0.055)`) and a `border-primary/20` column rule.
+
+#### Auto-scroll to Today
+
+On mount and when the *Today* button is pressed, the component calculates the today column's left-pixel offset (summing all column widths from day 1 to day before today) and scrolls the container to centre that column:
+
+```
+scrollLeft = LEFT_W + Σ(i=1 to today-1) dayW(i) − clientWidth/2 + dayW(today)/2
+```
+
+#### Booking Blocks
+
+Each booking block spans from its `start_date` to the day before `end_date` (check-out day is not shaded). Rendering rules:
+
+- **First-day cell**: 3 px coloured left border, 6 px left border-radius; guest's first name displayed in 11 pt semi-bold.
+- **Middle cells**: zero left/right borders, no radius.
+- **Last-day cell**: 1 px coloured right border, 6 px right border-radius.
+
+| Status | Background | Text / Border |
+|---|---|---|
+| Confirmed | `rgba(16,185,129,0.18)` | `#34d399` emerald |
+| Pending | `rgba(245,158,11,0.18)` | `#fbbf24` amber |
+| Completed | `rgba(255,255,255,0.06)` | `rgba(255,255,255,0.35)` |
+| Cancelled | `rgba(239,68,68,0.08)` | `rgba(239,68,68,0.5)` |
+
+#### Booking Popup
+
+Clicking a block opens a floating card positioned at the cursor. The popup implements smart vertical positioning: if the card would overflow the viewport bottom it is flipped above the cursor. It shows guest name, status, room number, check-in/out dates, duration, total cost, and email (if available).
+
+#### Month Navigation and Filters
+
+- Previous / Next chevron buttons change the displayed month.
+- The *Today* button also scrolls to today's column (not just changes the month).
+- A status filter pill-group (*All / Confirmed / Pending / Completed / Cancelled*) filters the `roomDayMap` computation.
+- An occupancy stat badge shows the percentage of room-days that are booked in the current month.
+
+---
+
+### 6.2 Guest Directory
+
+#### Overview
+
+The Guests page (`/admin/guests`) aggregates all bookings into unique guest records, keyed by email address (falling back to normalised guest name when no email is present).
+
+#### Guest Record
+
+Each `GuestRecord` aggregates across all matching bookings:
+
+| Field | Computation |
+|---|---|
+| `name` | From the first matching booking |
+| `email` | From any booking that has an email |
+| `phone` | From any booking that has a phone |
+| `totalNights` | Sum of nights across all bookings |
+| `totalSpent` | Sum of `nights × price_per_night` |
+| `lastVisit` | Maximum `start_date` across all bookings |
+| `firstVisit` | Minimum `start_date` across all bookings |
+
+#### Guest Card
+
+Each guest is rendered as a collapsible card:
+
+- **Avatar** — initials in a hue-from-name coloured circle (`hue = charCode sum % 360`), providing a distinctive visual identity per guest.
+- **Summary row** — name, email, phone, total stays, nights, revenue, and last-visit date, all visible at a glance.
+- **Status chips** — compact pills showing confirmed / pending booking counts.
+- **Expanded history** — clicking opens a sorted list of all bookings for that guest: booking ID, room, dates, nights, status badge, and cost.
+
+#### Search and Sort
+
+A search input filters by name, email, or phone (case-insensitive). A sort pill-group supports: *Last Visit*, *Stays*, *Nights*, *Spent*, *Name* — each toggleable between ascending and descending. The direction is indicated by a chevron beside the active sort label.
+
+A top-bar summary shows: unique guest count, total bookings, and total revenue across all guests currently displayed.
+
+---
+
+### 6.3 Housekeeping Board
+
+#### Overview
+
+The Housekeeping page (`/admin/housekeeping`) provides a Kanban board for tracking room cleaning status throughout the day.
+
+#### Columns
+
+| Column | Colour | Initial Contents |
+|---|---|---|
+| Needs Cleaning | Red | Rooms whose `end_date` equals today |
+| Being Cleaned | Amber | Empty (moved there by staff during the day) |
+| Ready | Emerald | All other non-occupied rooms |
+
+Currently occupied rooms (confirmed booking where `start_date ≤ today < end_date`) are excluded from the board and displayed in a separate notice bar.
+
+#### Drag and Drop
+
+The board uses the HTML5 Drag and Drop API (`draggable`, `onDragStart`, `onDragOver`, `onDrop`). A `draggingId` ref tracks which room is in flight. When a card is dropped on a column, that room's status is updated and the board state is persisted to `localStorage`.
+
+#### State Persistence
+
+Board state is stored in `localStorage` under the key `hk_board_YYYY-MM-DD`, where the date is today's ISO string. This means:
+
+- State survives page reloads and tab refreshes within the same day.
+- On a new calendar day the key changes, so the board resets to its derived initial state automatically.
+- The previous day's key is removed when a new board is saved, keeping `localStorage` clean.
+
+The *Reset Today* button re-derives the initial state from live booking data and overwrites `localStorage`.
+
+---
+
+### 6.4 Bulk Booking Actions
+
+#### Multi-Select Mechanism
+
+A `selectedIds: Set<number>` state tracks which booking IDs are currently selected. Each table row gains a checkbox in a new leftmost column:
+
+- **Header checkbox** — selects or deselects all bookings on the current page. Uses the DOM `indeterminate` property when only some rows are selected.
+- **Row checkbox** — uses `e.stopPropagation()` so that ticking a box does not also open the booking detail modal.
+
+#### Bulk Action Bar
+
+When `selectedIds.size > 0`, a floating action bar appears above the table:
+
+| Action | Colour | Scope |
+|---|---|---|
+| Confirm All | Emerald | Only pending and cancelled bookings |
+| Cancel All | Red | Only pending and confirmed bookings |
+| Export Selected | Muted | Generates `.xlsx` for selected rows only |
+| Clear selection | Muted | Deselects all |
+
+Bulk mutations use `Promise.allSettled` to fire all status updates in parallel. The selection is cleared after all requests complete.
+
+---
+
+## 7. New Shared UI Components (v2)
+
+### 7.1 DatePicker
+
+The `DatePicker` component replaces all native `<input type="date">` elements across the dashboard, ensuring a consistent glassmorphic appearance in both dark and light modes. It renders a custom trigger button that opens a calendar dropdown, supporting `value`, `onChange`, `placeholder`, `min`, and `className` props. Clicking outside the dropdown closes it via a `mousedown` document listener.
+
+---
+
+### 7.2 PhoneInput
+
+A composite field component for collecting international mobile numbers.
+
+#### Country Database
+
+| Country | Code | Min digits | Max digits |
+|---|---|---|---|
+| Egypt | +20 | 10 | 10 |
+| Saudi Arabia | +966 | 9 | 9 |
+| UAE | +971 | 9 | 9 |
+| Kuwait | +965 | 8 | 8 |
+| Qatar | +974 | 8 | 8 |
+| Jordan | +962 | 9 | 9 |
+| Bahrain | +973 | 8 | 8 |
+| Libya | +218 | 9 | 9 |
+| Japan | +81 | 10 | 11 |
+| USA/Canada | +1 | 10 | 10 |
+| UK | +44 | 10 | 10 |
+| Germany | +49 | 10 | 11 |
+| France | +33 | 9 | 9 |
+| Turkey | +90 | 10 | 10 |
+| China | +86 | 11 | 11 |
+| India | +91 | 10 | 10 |
+| Russia | +7 | 10 | 10 |
+| Italy | +39 | 9 | 10 |
+| Spain | +34 | 9 | 9 |
+| South Korea | +82 | 9 | 10 |
+
+#### Behaviour
+
+- A flag + code button opens a searchable dropdown (auto-focuses the search input on open via `setTimeout`).
+- As the user types, a validity indicator shows a green tick or red cross based on digit count.
+- An error hint clarifies whether the issue is non-digit characters or an incorrect digit count for the selected country.
+- The emitted value is a full phone string: `"+20 1234567890"` or `""` if empty.
+- The parser `parsePhone()` tries country codes sorted by length descending to correctly split values like `+966...` (3-char code) before `+96...` (ambiguous prefix).
+
+---
+
+### 7.3 RoomPickerSelect
+
+A rich dropdown that replaces the raw numeric room-ID input in the new-booking form. Each option shows:
+
+- A type-colour indicator dot.
+- Room number and type label.
+- Price per night.
+
+Rooms with overlapping confirmed or pending bookings for the selected date range are grayed out and marked *(booked)* — computed via a `useMemo` that cross-references the global bookings cache:
+
+```typescript
+const unavailableRoomIds = useMemo(() => {
+  if (!form.start_date || !form.end_date) return new Set()
+  const busy = new Set()
+  for (const b of bookings ?? []) {
+    if (b.status !== 'pending' && b.status !== 'confirmed') continue
+    if (b.start_date < form.end_date && b.end_date > form.start_date)
+      busy.add(b.room_id)
+  }
+  return busy
+}, [bookings, form.start_date, form.end_date])
+```
+
+---
+
+### 7.4 AgendaPreviewModal
+
+Clicking a guest row in the Overview's Today's Agenda section opens a modal overlay showing a mini booking review:
+
+- Guest initials avatar with status-coloured background.
+- Status badge (pending / confirmed / etc.).
+- Room card with type-coloured icon.
+- Check-in and check-out date boxes.
+- Total nights and estimated cost.
+- Email and phone contact blocks (if present).
+
+The modal uses the same slide-in animation pattern (`requestAnimationFrame` enter, 280 ms `setTimeout` exit) as all other modals in the dashboard.
+
+---
+
+### 7.5 RoomDetailModal
+
+Clicking a room row in the Rooms inventory table opens a detail panel without leaving the page:
+
+- **Three stat boxes**: today's occupancy status (Available / Booked Soon / Occupied), total bookings ever, total revenue earned.
+- **Upcoming reservations list**: all future confirmed or pending bookings, showing guest initials, check-in/out dates, nights, and status badge.
+- **Recent history**: the 5 most recent completed or cancelled bookings in a compact list.
+- **Footer actions**: Close, Edit Room (opens the edit modal), and Remove (opens the delete confirmation modal).
+
+The action cells in the table use `e.stopPropagation()` so that the inline Edit and Delete buttons do not trigger the row-click modal.
+
+---
+
+## 8. Frontend Modules (Existing Pages)
+
+### 8.1 Application Shell
 
 #### AdminLayout
 
 The `AdminLayout` component wraps every admin page and provides:
 
-- **Sidebar** — navigation links to Overview, Bookings, and Rooms; the E-JUST logo with a CSS `brightness` filter that inverts it for light mode.
+- **Sidebar** — navigation links to Overview, Bookings, Rooms, **Calendar**, **Guests**, and **Housekeeping** (v2 additions); the E-JUST logo with a CSS `brightness` filter that inverts it for light mode.
 - **Top bar** — notification bell and user avatar.
 - **Theme toggle** — switches between `dark`, `light`, and `system` modes; persisted in `localStorage`.
 
@@ -233,7 +544,7 @@ A global `NotificationContext` (React Context API) maintains a list of in-memory
 | `status_change` | Booking status updated |
 | `new_room` | Room created successfully |
 
-The `NotificationBell` component renders a dropdown with unread counts, colour-coded icons, and relative timestamps. It is fully adapted for both dark and light modes using the `text-gray-X dark:text-white/XX` pattern.
+The `NotificationBell` component renders a dropdown with unread counts, colour-coded icons, and relative timestamps. It is fully adapted for both dark and light modes.
 
 #### Theming
 
@@ -243,13 +554,13 @@ The design language is **glassmorphism**: translucent card backgrounds (`backdro
 
 ---
 
-### 5.2 Overview Page
+### 8.2 Overview Page
 
 The Overview page is the dashboard landing screen, providing a comprehensive snapshot of the guest house's operational state.
 
 #### Stat Cards
 
-Four animated stat cards:
+Four animated stat cards using `useCountUp()` (ease-out quartic over 1.1 s):
 
 | Card | Value | Accent Colour |
 |---|---|---|
@@ -258,11 +569,9 @@ Four animated stat cards:
 | Pending | `counts.pending` | Amber |
 | Cancelled | `counts.cancelled` | Red |
 
-Each card uses a `useCountUp()` hook that animates the number from 0 to the target value using an ease-out quartic curve over 1.1 seconds, triggering once data has loaded.
+#### Today's Agenda (updated)
 
-#### Today's Agenda
-
-Filters all bookings to find those whose `start_date` or `end_date` matches today's ISO date. Renders guest initials, room number, and a colour-coded "Check-in" / "Check-out" badge.
+Guest rows are now `<button>` elements. Clicking opens `AgendaPreviewModal` with the full booking breakdown. A right-pointing chevron appears on hover to indicate interactivity.
 
 #### Pending Approvals
 
@@ -280,28 +589,17 @@ Revenue is formatted with an Egyptian locale helper (`fmtEGP`) that abbreviates 
 
 #### Charts
 
-**Monthly Bookings Bar Chart**
-An inline SVG bar chart spanning the last 6 calendar months. Bars grow upwards on mount using a CSS `barGrow` keyframe with a `cubic-bezier(0.34, 1.56, 0.64, 1)` spring. Grid lines and labels adapt to dark/light mode via computed colour variables.
+**Monthly Bookings Bar Chart** — An inline SVG bar chart spanning the last 6 calendar months. Bars grow upwards on mount using a CSS `barGrow` keyframe.
 
-**Status Breakdown**
-A horizontal stacked progress bar followed by per-status rows, each with a mini bar animating to the correct proportion. Counts and percentages are derived from the bookings array with `useMemo`.
+**Status Breakdown** — A horizontal stacked progress bar followed by per-status rows with mini bars animating to the correct proportion.
 
-**Revenue Trend Line Chart**
-An SVG polyline/polygon chart showing monthly confirmed revenue. The line is drawn using a `stroke-dashoffset` animation (`lineDrawIn`) over 1.2 seconds. Dots appear with a `dotPop` spring animation.
+**Revenue Trend Line Chart** — An SVG polyline/polygon chart showing monthly confirmed revenue. The line is drawn using a `stroke-dashoffset` animation (`lineDrawIn`) over 1.2 seconds.
 
-**Revenue by Room Type**
-Horizontal progress bars — one per room type (Single, Double, Suite, Family) — showing the proportion of total confirmed revenue attributable to each category. Colour-coded with type-specific accent colours:
-
-| Type | Colour |
-|---|---|
-| Single | `#60a5fa` (blue) |
-| Double | `#a78bfa` (purple) |
-| Suite | `#fbbf24` (amber) |
-| Family | `#34d399` (green) |
+**Revenue by Room Type** — Horizontal progress bars per room type (Single `#60a5fa`, Double `#a78bfa`, Suite `#fbbf24`, Family `#34d399`).
 
 #### Recent Activity Feed
 
-The 7 most recently created bookings (sorted by descending ID) listed with guest initials avatar, room number, nights, check-in date, status badge, and cost estimate.
+The 7 most recently created bookings listed with guest initials avatar, room number, nights, check-in date, status badge, and cost estimate.
 
 #### Export Functions
 
@@ -313,31 +611,25 @@ The 7 most recently created bookings (sorted by descending ID) listed with guest
 
 ---
 
-### 5.3 Bookings Page
+### 8.3 Bookings Page (updated)
 
-The Bookings page is the primary operational tool for reservation management.
+#### Date-Range Filter
+
+Two `DatePicker` components (*From date* / *To date*) filter the bookings table by check-in date range. A clear button removes both values. (This was a known limitation in v1 — now resolved.)
 
 #### Reservation Table
 
-A scrollable table with columns: ID, Guest Name, Room, Check-in, Check-out, Status, Actions. Features:
+Now has 8 columns (checkbox prepended): ☐, ID, Guest Name, Room, Check-in, Check-out, Status, Actions. Features:
 
 - **Search** — real-time filtering by guest name (case-insensitive).
-- **Status filter** — dropdown built on a custom `CustomSelect` component with dark/light adaptive styling.
-- **Skeleton loading** — three animated skeleton rows while the API request is in flight.
-- **Inline quick actions** — per-row Confirm / Cancel buttons appear on row hover; hidden when inapplicable.
-- **Row click** — opens the Booking Detail Modal for the selected record.
+- **Status filter** — dropdown built on `CustomSelect`.
+- **Skeleton loading** — three animated skeleton rows (8-column) while the API request is in flight.
+- **Inline quick actions** — per-row Confirm / Cancel buttons appear on row hover.
+- **Row click** — opens the Booking Detail Modal (suppressed when clicking the checkbox).
 
 #### Booking Detail Modal
 
 A full-featured slide-in modal with smooth entry/exit animations.
-
-**Animation Pattern**
-
-The modal uses a two-state animation trick to ensure CSS transitions always play from a hidden state, even when the component is freshly mounted:
-
-1. A `staleBooking` state preserves the last non-null booking so content remains visible during the close animation.
-2. A `visible` state lags one `requestAnimationFrame` behind `isOpen`, giving the browser one paint cycle to render the initial hidden state before applying transition classes.
-3. After close, a 320 ms `setTimeout` clears `staleBooking`, fully unmounting the DOM.
 
 **Editable Fields**
 
@@ -345,115 +637,86 @@ The modal uses a two-state animation trick to ensure CSS transitions always play
 |---|---|---|
 | Guest Name | Text input | Non-empty |
 | Email | Email input | Optional |
-| Mobile | Tel input | Optional |
-| Check-in | Date picker | Must be before check-out |
-| Check-out | Date picker | Must be after check-in |
+| Mobile | `PhoneInput` | Country-code picker + digit validation |
+| Check-in | `DatePicker` | Must be before check-out |
+| Check-out | `DatePicker` | Must be after check-in |
 
-The **Save Changes** button is disabled until at least one field differs from the server value (`isDirty`), and again if dates are invalid (`datesInvalid`). On success the modal closes automatically; on failure a red error banner appears in the footer.
+The **Save Changes** button is disabled until at least one field differs from the server value (`isDirty`), and again if dates are invalid (`datesInvalid`).
 
-**Status Flow Bar**
+#### Manual Booking Form (updated)
 
-A three-step progress indicator (Pending → Confirmed → Completed) rendered with styled div nodes. The "Cancelled" state replaces the flow bar with a red cancellation badge.
+| Field | v1 | v2 |
+|---|---|---|
+| Room | Numeric `<input>` | `RoomPickerSelect` (shows availability) |
+| Mobile | Text `<input>` | `PhoneInput` with country code |
 
-**Live Cost Summary**
+---
 
-When the date range is valid, a live cost calculation is shown:
+### 8.4 Rooms Page (updated)
 
+Clicking a room row now opens `RoomDetailModal` (see Section 7.5). Action column cells use `e.stopPropagation()` to prevent the row-click handler from firing when Edit or Delete is pressed.
+
+The count summary strip above the table shows totals broken down by type. Filtering by room number and type remains unchanged.
+
+---
+
+## 9. Shared Infrastructure
+
+### 9.1 Custom Hooks
+
+| Hook | Purpose |
+|---|---|
+| `useAdminBookings()` | Fetch all bookings (cached) |
+| `useAdminRooms()` | Fetch all rooms (cached) |
+| `useCreateManualBooking()` | Mutation with optimistic insert |
+| `useUpdateBooking()` | Mutation with optimistic field patch |
+| `useUpdateBookingStatus()` | Mutation with optimistic status flip |
+| `useCreateRoom()` | Mutation with optimistic insert |
+| `useUpdateRoom()` | Mutation with optimistic field patch |
+| `useDeleteRoom()` | Mutation with optimistic removal |
+| `useGlowCard()` | Cursor-tracked border glow |
+
+### 9.2 Type Definitions (`types/admin.ts`)
+
+```typescript
+interface Booking {
+  id: number
+  guest_name: string
+  guest_email?: string
+  guest_phone?: string
+  room_id: number
+  start_date: string   // YYYY-MM-DD
+  end_date: string     // YYYY-MM-DD
+  status: BookingStatus
+}
+
+interface Room {
+  id: number
+  room_number: string
+  type: RoomType
+  price_per_night: number
+}
+
+type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+type RoomType      = 'single' | 'double' | 'suite' | 'family'
 ```
-cost = nights × price_per_night
-```
-
-where `price_per_night` is looked up from the room map.
-
-#### Manual Booking Form
-
-A modal form for creating bookings on behalf of guests. Fields:
-
-1. Guest Name (required)
-2. Email (optional)
-3. Mobile Number (optional)
-4. Room ID (required, integer)
-5. Check-in date (required)
-6. Check-out date (required, must be after check-in)
-
-On submission the backend creates the booking under an admin proxy user, encoding all three contact fields into `special_requests`. TanStack Query's optimistic update adds the booking to the cache instantly; the real server record replaces it on success.
-
-#### Excel Export — Bookings Sheet
-
-The **Export Excel** button generates a 12-column `.xlsx` workbook:
-
-| Col | Header | Notes |
-|---|---|---|
-| 1 | ID | Centred |
-| 2 | Guest Name | |
-| 3 | Email | Blue font |
-| 4 | Mobile | |
-| 5 | Room No. | Centred |
-| 6 | Room Type | Centred |
-| 7 | Check-in | Centred |
-| 8 | Check-out | Centred |
-| 9 | Nights | Bold, centred |
-| 10 | Status | Cell fill colour matches status |
-| 11 | Price/Night (EGP) | Right-aligned, `#,##0` format, green font |
-| 12 | Total Cost (EGP) | Right-aligned, `#,##0` format, green font |
-
-Auto-filter on row 5. Rows 1–5 frozen. Alternating row stripes (`#F7F7F7`).
 
 ---
 
-### 5.4 Rooms Page
-
-The Rooms page presents the accommodation inventory and supports room creation.
-
-#### Room Inventory Table
-
-Columns: ID, Room Number, Type (colour-coded badge), Price/Night. Filtering by room number (text search) and type (dropdown). The count summary strip above the table shows totals broken down by type.
-
-#### Add Room Modal
-
-Three fields:
-
-| Field | Type | Validation |
-|---|---|---|
-| Room Number | Text | Required |
-| Room Type | Dropdown (Single/Double/Suite/Family) | Required |
-| Price per Night (EGP) | Numeric | Must be > 0 |
-
-`useCreateRoom()` handles optimistic insertion with a temporary negative ID, replaced by the real server ID on success.
-
----
-
-## 6. ExportButton Component
-
-A reusable component providing a consistent export interaction pattern. It wraps any async export function and manages three visual states:
-
-| State | Icon | Appearance |
-|---|---|---|
-| `idle` | Download arrow | Muted, hover-lightens |
-| `loading` | Spinning loader | Muted, `cursor-wait` |
-| `done` | Check mark | Emerald, "Exported!" label for 2.4 s |
-
-**Variants:**
-
-- `default` — labelled button with icon + text (page-header placement)
-- `icon` — compact 32×32 px square (inside chart card headers)
-
-Both variants are fully adaptive for dark and light modes.
-
----
-
-## 7. Excel Export System
+## 10. Excel Export System
 
 All data exports use ExcelJS to generate `.xlsx` files entirely in the browser, without any server-side involvement. The `lib/exportExcel.ts` module exposes four async functions:
 
 | Function | Output |
 |---|---|
-| `exportBookingsExcel()` | Full reservation sheet (12 cols) |
+| `exportBookingsExcel(bookings, roomMap, filename)` | Full reservation sheet (12 cols) |
 | `exportOverviewExcel()` | Multi-section overview report |
 | `exportMonthlyChartExcel()` | Monthly booking counts + revenue |
 | `exportRevenueTrendExcel()` | Revenue trend + by-type breakdown |
 
-### 7.1 Colour Palette (ARGB)
+> **Export Selected Bookings** — `exportBookingsExcel` accepts any subset of bookings. The Bookings page passes only the `selectedIds`-filtered subset when the *Export Selected* bulk action is triggered, enabling targeted workbook generation without a dedicated API endpoint.
+
+### 10.1 Colour Palette (ARGB)
 
 | Name | ARGB | Usage |
 |---|---|---|
@@ -466,13 +729,13 @@ All data exports use ExcelJS to generate `.xlsx` files entirely in the browser, 
 | Cancelled | `FFFEE2E2` / `FF991B1B` | Status fill / font |
 | Completed | `FFF3F4F6` / `FF374151` | Status fill / font |
 
-### 7.2 Workbook Title Block Structure
+### 10.2 Workbook Title Block Structure
 
 | Row | Content | Style |
 |---|---|---|
-| 1 | "E-JUST GUEST HOUSE" | Brand red, 16pt bold, 44 px height |
-| 2 | Report subtitle | Dark BG, 11pt bold |
-| 3 | Generation timestamp | Muted italic, 9pt |
+| 1 | "E-JUST GUEST HOUSE" | Brand red, 16 pt bold, 44 px height |
+| 2 | Report subtitle | Dark BG, 11 pt bold |
+| 3 | Generation timestamp | Muted italic, 9 pt |
 | 4 | Spacer | Empty |
 | 5 | Column headers | Brand red (bookings) or section BG |
 
@@ -480,39 +743,45 @@ Rows 1–5 are frozen in all workbooks. Auto-filter applied on the header row.
 
 ---
 
-## 8. Known Limitations & Future Work
+## 11. Known Limitations & Future Work
 
-### 8.1 Current Limitations
+### 11.1 Resolved in v2
+
+| v1 Limitation | Resolution |
+|---|---|
+| No date-range filter on bookings | `DatePicker` from/to filter bar added to Bookings page |
+| No room editing or deletion | `useUpdateRoom` and `useDeleteRoom` hooks; `RoomDetailModal` provides Edit and Remove shortcuts |
+| No pagination UI | Bookings page now has a full pagination strip with ellipsis |
+
+### 11.2 Remaining Limitations
 
 | # | Limitation | Notes |
 |---|---|---|
-| 1 | **No authentication on admin routes** | `/api/admin` endpoints accept requests without token verification — intentional for dev, must be secured before production |
+| 1 | **No authentication on admin routes** | `/api/admin` endpoints accept requests without token verification — must be secured before production |
 | 2 | **Guest contact in `special_requests`** | Email and phone stored as pipe-encoded string rather than dedicated DB columns |
-| 3 | **No pagination UI** | API supports `skip`/`limit` but frontend fetches all records in one request |
-| 4 | **No room editing or deletion** | Rooms page only supports creation |
-| 5 | **No date-range filter on bookings** | Search limited to guest name and status |
+| 3 | **Housekeeping board is local-only** | Board state lives in `localStorage`; multiple staff members cannot collaborate without shared backend state |
+| 4 | **Calendar name truncation** | Guest names clipped to the first given name within each booking block; long names may be cut when stay is short |
 
-### 8.2 Recommended Future Enhancements
+### 11.3 Recommended Future Enhancements
 
 1. Add JWT/session authentication to all `/api/admin` routes, enforcing `role = 'admin'`.
-2. Migrate guest contact fields to proper database columns via an Alembic migration.
-3. Implement server-sent events or WebSocket push for real-time booking notifications.
-4. Add a printable/PDF booking confirmation generator.
-5. Introduce server-side pagination and date-range filtering.
-6. Add room editing and soft-delete (toggle `is_active`).
+2. Migrate guest contact fields to dedicated DB columns via an Alembic migration.
+3. Persist housekeeping board state to the database so all staff see the same view.
+4. Implement server-sent events or WebSocket push for real-time booking notifications.
+5. Add a printable/PDF booking confirmation generator.
+6. Introduce server-side pagination and date-range filtering.
 7. Internationalise the interface (Arabic/English switcher).
+8. Add a weekly/day view option to the Calendar.
 
 ---
 
-## 9. Conclusion
+## 12. Conclusion
 
-The E-JUST Guest House Admin Dashboard delivers a complete administrative interface built on modern web standards. The combination of React 18's concurrent model, TanStack Query's server-state primitives, and FastAPI's async I/O produces a responsive, reliable experience with predictable optimistic updates and graceful error handling.
+Version 2 of the E-JUST Guest House Admin Dashboard significantly expands the operational toolset available to staff. The three new pages — Occupancy Calendar, Guest Directory, and Housekeeping Board — address core daily workflows: visualising room availability at a glance, understanding guest history and loyalty, and coordinating room turnover between checkouts and new arrivals.
 
-The visual design — glassmorphic cards, animated statistics, cursor-tracked glows, and a brand-red accent — reflects the E-JUST institutional identity while meeting contemporary SaaS dashboard expectations. Full light/dark mode support ensures the interface is usable across a range of display environments.
+Bulk booking actions reduce the per-booking effort for mass confirmations or cancellations, while the targeted export feature gives staff the flexibility to extract exactly the records they need. The new shared UI components — `DatePicker`, `PhoneInput`, and `RoomPickerSelect` — bring interface consistency and input quality across all booking entry points.
 
-The Excel export system, powered entirely by ExcelJS in the browser, produces professionally styled `.xlsx` workbooks that operational staff can immediately use for record-keeping, auditing, and reporting — without any server-side rendering overhead.
-
-The codebase is structured for maintainability: strict TypeScript types throughout, a clean hook/component separation, and a thin API client layer that isolates HTTP concerns from UI logic. Future work — authentication, server-push notifications, pagination, and a proper guest contact schema migration — can be layered onto this foundation without architectural changes.
+The underlying architecture remains unchanged: all new pages are powered by the same `useAdminBookings()` and `useAdminRooms()` TanStack Query hooks, so data is shared and cache-coherent across every view with no additional API endpoints required for the new features.
 
 ---
 
@@ -526,36 +795,43 @@ Hotel-Booking-System/
 │       │   ├── admin_routes.py      # Admin REST endpoints
 │       │   └── deps.py              # get_db dependency
 │       ├── models/
-│       │   ├── booking.py           # SQLAlchemy Booking model
-│       │   └── room.py              # SQLAlchemy Room model
+│       │   ├── booking.py
+│       │   └── room.py
 │       ├── repositories/
-│       │   └── admin_repo.py        # DB access layer
+│       │   └── admin_repo.py
 │       ├── schemas/
 │       │   └── admin.py             # Pydantic DTOs
-│       └── main.py                  # FastAPI app + router registration
+│       └── main.py
 └── web-app/
     └── src/
         ├── components/
-        │   ├── ExportButton.tsx     # Async export button (idle/loading/done)
-        │   └── NotificationBell.tsx # Notification dropdown
+        │   ├── DatePicker.tsx        # NEW — custom date picker
+        │   ├── PhoneInput.tsx        # NEW — country-code phone field
+        │   ├── CustomSelect.tsx
+        │   ├── ExportButton.tsx
+        │   ├── NotificationBell.tsx
+        │   └── ScrollArea.tsx
         ├── contexts/
         │   ├── NotificationContext.tsx
         │   └── ThemeContext.tsx
         ├── hooks/
-        │   ├── useAdminApi.ts       # TanStack Query hooks
-        │   └── useGlowCard.ts       # Cursor-tracked glow
+        │   ├── useAdminApi.ts        # TanStack Query hooks
+        │   └── useGlowCard.ts
         ├── layouts/
-        │   └── AdminLayout.tsx      # Sidebar + top bar shell
+        │   └── AdminLayout.tsx       # Updated — 3 new nav items
         ├── lib/
-        │   ├── apiClient.ts         # Axios instance + adminApi
-        │   ├── exportCsv.ts         # Legacy CSV helper
-        │   └── exportExcel.ts       # ExcelJS export functions
+        │   ├── apiClient.ts
+        │   ├── exportExcel.ts
+        │   └── exportCsv.ts
         ├── pages/admin/
-        │   ├── Overview.tsx         # Dashboard overview page
-        │   ├── Bookings.tsx         # Booking management page
-        │   └── Rooms.tsx            # Room inventory page
+        │   ├── Overview.tsx          # Updated — AgendaPreviewModal
+        │   ├── Bookings.tsx          # Updated — bulk actions, DatePicker, PhoneInput, RoomPicker
+        │   ├── Rooms.tsx             # Updated — RoomDetailModal
+        │   ├── Calendar.tsx          # NEW — occupancy calendar
+        │   ├── Guests.tsx            # NEW — guest directory
+        │   └── Housekeeping.tsx      # NEW — housekeeping kanban
         └── types/
-            └── admin.ts             # TypeScript interfaces
+            └── admin.ts
 ```
 
 ---
