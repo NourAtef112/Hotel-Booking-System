@@ -24,16 +24,24 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/guest_housing"
+    # Database — required, no default (set DATABASE_URL env var; Supabase URI format accepted)
+    DATABASE_URL: str
 
-    @field_validator("DATABASE_URL")
+    @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
+        # Convert Supabase/Railway postgres:// or postgresql:// to asyncpg driver format
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Strip all query params — asyncpg uses connect_args for SSL, not URL query strings
+        if "?" in v:
+            v = v.split("?")[0]
         if not v.startswith("postgresql+asyncpg://"):
             raise ValueError(
-                "DATABASE_URL must start with 'postgresql+asyncpg://' — "
-                f"got: {v!r}. Check your .env file."
+                "DATABASE_URL must be a postgresql:// or postgres:// URI — "
+                f"got: {v!r}"
             )
         return v
 
@@ -44,6 +52,10 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8081"]
+
+    # Firebase Auth
+    FIREBASE_PROJECT_ID: str = ""
+    FIREBASE_CREDENTIALS_JSON: str = ""  # Service account JSON as a single-line string
 
     # Paymob Payment Gateway — loaded from .env, no defaults for secret keys
     PAYMOB_SECRET_KEY: str = ""
