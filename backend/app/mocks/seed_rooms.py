@@ -1,7 +1,17 @@
 """
-seed_rooms.py — Real E-JUST Guest House room data.
-El as3ar kollaha bel Gneih Masry (EGP). El ghorf GH-202 makhtooba (today = May 15, 2026).
+seed_rooms.py — E-JUST Guest House room data + async DB seeder.
+
+run_seed() is called on startup (after create_all_tables).
+It inserts the 5 real rooms and a default admin only if the tables are empty.
 """
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core import security
+from app.models.models import Room, User
+
+# ── Static seed data ────────────────────────────────────────────────────────────
 
 ROOMS = [
     {
@@ -45,7 +55,7 @@ ROOMS = [
         "price_per_night": 600.0,
         "amenities": ["AC", "WiFi", "Private Bathroom", "Mini Fridge", "Sitting Area", "TV"],
         "building": "Guest House Block B",
-        "available": False,   # already occupied — shows real-time state (May 14–20)
+        "available": False,
         "image_url": "/static/rooms/gh202.jpg",
     },
     {
@@ -61,9 +71,6 @@ ROOMS = [
     },
 ]
 
-# GH-202 is booked from May 14 → May 20, 2026.
-# Today is May 15 — so the overlap algorithm will catch any new booking for room 4
-# that overlaps with this window. Da el proof-of-concept beta3 el system.
 EXISTING_BOOKINGS = [
     {
         "id": 1,
@@ -72,6 +79,55 @@ EXISTING_BOOKINGS = [
         "start_date": "2026-05-14",
         "end_date": "2026-05-20",
         "status": "confirmed",
-        "total_cost": 3600.0,  # 6 layali × 600 EGP
+        "total_cost": 3600.0,
     }
 ]
+
+_ROOM_TYPE_MAP = {
+    "Single": "single",
+    "Double": "double",
+    "Suite": "suite",
+    "VIP Suite": "vip_suite",
+}
+
+
+# ── Async seeder ────────────────────────────────────────────────────────────────
+
+async def run_seed(session: AsyncSession) -> None:
+    """Insert E-JUST rooms and default admin if the tables are empty."""
+    await _seed_rooms(session)
+    await _seed_admin(session)
+
+
+async def _seed_rooms(session: AsyncSession) -> None:
+    result = await session.execute(select(Room).limit(1))
+    if result.scalar_one_or_none() is not None:
+        return  # already seeded
+
+    for r in ROOMS:
+        room = Room(
+            room_number=r["room_number"],
+            room_type=_ROOM_TYPE_MAP[r["type"]],
+            price_per_night=r["price_per_night"],
+            status="available" if r["available"] else "booked",
+        )
+        session.add(room)
+
+    await session.commit()
+
+
+async def _seed_admin(session: AsyncSession) -> None:
+    result = await session.execute(
+        select(User).where(User.role == "admin").limit(1)
+    )
+    if result.scalar_one_or_none() is not None:
+        return  # admin already exists
+
+    admin = User(
+        email="admin@ejust.edu.eg",
+        hashed_password=security.hash_password("Admin123!"),
+        full_name="E-JUST Admin",
+        role="admin",
+    )
+    session.add(admin)
+    await session.commit()

@@ -9,6 +9,8 @@ from app.api.v1 import api_router
 from app.api.v1.payment_router import router as payment_router
 from app.api.v1.ws_availability import router as ws_router
 from app.api.admin_routes import router as admin_router
+from app.core.database import AsyncSessionLocal, create_all_tables
+from app.mocks.seed_rooms import run_seed
 from app.core.errors import generic_exception_handler, validation_exception_handler
 
 app = FastAPI(
@@ -33,6 +35,13 @@ app.include_router(api_router, prefix="/api/v1")
 app.include_router(ws_router)
 app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 app.include_router(payment_router)
+
+
+@app.on_event("startup")
+async def on_startup() -> None:
+    await create_all_tables()
+    async with AsyncSessionLocal() as session:
+        await run_seed(session)
 
 
 @app.get("/health", tags=["health"])
