@@ -48,6 +48,7 @@ class IBookingRepository(Protocol):
     def get_booking_by_id(self, booking_id: int) -> Optional[BookingData]: ...
     def update_booking_status(self, booking_id: int, status: str) -> Optional[BookingData]: ...
     def get_bookings_for_user(self, user_id: int) -> list[BookingData]: ...
+    def update_payment_status(self, booking_id: int, status: str) -> None: ...
 
 
 # ── In-memory mock (used until PostgreSQL session is injected) ─────────────────
@@ -113,6 +114,13 @@ class MockBookingRepository:
 
     def get_bookings_for_user(self, user_id: int) -> list[BookingData]:
         return [b for b in self._bookings if b.user_id == user_id]
+
+    def update_payment_status(self, booking_id: int, status: str) -> None:
+        # ba3d el webhook, ne3del el booking status — law mesh mawgoud → ignore
+        for b in self._bookings:
+            if b.id == booking_id:
+                b.status = status
+                return
 
 
 # module-level singleton — imported by the router until DI is wired

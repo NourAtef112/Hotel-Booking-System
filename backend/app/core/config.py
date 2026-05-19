@@ -4,7 +4,6 @@ Uses pydantic-settings for type-safe config loading.
 """
 
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -34,8 +33,16 @@ class Settings(BaseSettings):
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8081"]
 
+    # Paymob Payment Gateway — all loaded from .env, no defaults for secret keys
+    PAYMOB_SECRET_KEY: str = ""
+    PAYMOB_PUBLIC_KEY: str = ""
+    PAYMOB_HMAC_KEY: str = ""
+    PAYMOB_INTEGRATION_ID: str = ""
+    PAYMOB_BASE_URL: str = "https://accept.paymob.com"
+    BASE_URL: str = "http://localhost:8000"
+
     class Config:
-        env_file = "../.env"
+        env_file = (".env", "../.env")
         case_sensitive = True
         extra = "ignore"
 
