@@ -101,6 +101,7 @@ html:not(.dark) .card-float:hover {
 
 /* ── Light mode: text overrides ── */
 html:not(.dark) .text-white       { color: rgba(13, 13, 18, 1.00) !important; }
+html:not(.dark) .text-white\/80   { color: rgba(13, 13, 18, 0.88) !important; }
 html:not(.dark) .text-white\/70   { color: rgba(13, 13, 18, 0.82) !important; }
 html:not(.dark) .text-white\/60   { color: rgba(13, 13, 18, 0.75) !important; }
 html:not(.dark) .text-white\/55   { color: rgba(13, 13, 18, 0.70) !important; }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminBookings, useAdminRooms } from '../../hooks/useAdminApi'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { Booking, BookingStatus, Room } from '../../types/admin'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -19,10 +20,10 @@ function initials(name: string) {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<BookingStatus, { bg: string; border: string; text: string }> = {
-  confirmed: { bg: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.35)', text: '#34d399' },
-  pending:   { bg: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.35)', text: '#fbbf24' },
-  completed: { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)', text: 'rgba(255,255,255,0.35)' },
-  cancelled: { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.15)',  text: 'rgba(239,68,68,0.5)' },
+  confirmed: { bg: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)',  text: '#34d399' },
+  pending:   { bg: 'rgba(245,158,11,0.18)',  border: 'rgba(245,158,11,0.35)',  text: '#fbbf24' },
+  completed: { bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.30)', text: '#94a3b8' },
+  cancelled: { bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.30)',   text: '#f87171' },
 }
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
@@ -161,6 +162,10 @@ function Legend() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Calendar() {
+  const { mode } = useTheme()
+  // Re-reads when mode changes so isDark stays in sync with the toggled .dark class
+  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
   const { data: rooms = [], isLoading: roomsLoading } = useAdminRooms()
   const { data: bookings = [], isLoading: bookingsLoading } = useAdminBookings()
 
@@ -353,13 +358,13 @@ export default function Calendar() {
             <div style={{ width: gridWidth() }}>
               {/* Header row: day numbers */}
               <div
-                className="flex sticky top-0 z-20 bg-[#0f0f0f] border-b border-white/[0.06]"
-                style={{ paddingLeft: LEFT_W }}
+                className="flex sticky top-0 z-20 border-b border-white/[0.06]"
+                style={{ paddingLeft: LEFT_W, background: isDark ? '#0f0f0f' : '#f4f4f8' }}
               >
                 {/* Sticky corner */}
                 <div
-                  className="absolute left-0 top-0 flex items-center px-4 border-r border-white/[0.06] bg-[#0f0f0f]"
-                  style={{ width: LEFT_W, height: ROW_H }}
+                  className="absolute left-0 top-0 flex items-center px-4 border-r border-white/[0.06]"
+                  style={{ width: LEFT_W, height: ROW_H, background: isDark ? '#0f0f0f' : '#d8d8e4' }}
                 >
                   <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Room</span>
                 </div>
@@ -420,7 +425,9 @@ export default function Calendar() {
                       className="sticky left-0 z-10 flex items-center gap-2.5 px-4 border-r border-b border-white/[0.05] shrink-0"
                       style={{
                         width: LEFT_W,
-                        background: isEven ? '#111' : '#0d0d0d',
+                        background: isEven
+                          ? (isDark ? '#111111' : '#e4e4ee')
+                          : (isDark ? '#0d0d0d' : '#dcdce8'),
                       }}
                     >
                       <div

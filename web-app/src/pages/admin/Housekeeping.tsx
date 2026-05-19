@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAdminBookings, useAdminRooms } from '../../hooks/useAdminApi'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { Room } from '../../types/admin'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -14,12 +15,13 @@ interface HKRoom {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COLUMNS: { id: HKStatus; label: string; desc: string; color: string; icon: React.ReactNode }[] = [
+const COLUMNS: { id: HKStatus; label: string; desc: string; color: string; cssColor: string; icon: React.ReactNode }[] = [
   {
     id: 'needs_cleaning',
     label: 'Needs Cleaning',
     desc: 'Checked out today',
     color: 'text-red-400',
+    cssColor: '#f87171',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M3 6h18M3 12h18M3 18h18"/>
@@ -32,6 +34,7 @@ const COLUMNS: { id: HKStatus; label: string; desc: string; color: string; icon:
     label: 'Being Cleaned',
     desc: 'In progress',
     color: 'text-amber-400',
+    cssColor: '#fbbf24',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
@@ -43,6 +46,7 @@ const COLUMNS: { id: HKStatus; label: string; desc: string; color: string; icon:
     label: 'Ready',
     desc: 'Clean & available',
     color: 'text-emerald-400',
+    cssColor: '#34d399',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <polyline points="20 6 9 17 4 12"/>
@@ -51,21 +55,24 @@ const COLUMNS: { id: HKStatus; label: string; desc: string; color: string; icon:
   },
 ]
 
-const COL_STYLE: Record<HKStatus, { headerBg: string; cardBorder: string; dropBg: string }> = {
+const COL_STYLE: Record<HKStatus, { headerBg: string; cardBorder: string; dropBg: string; accentBorder: string }> = {
   needs_cleaning: {
-    headerBg: 'rgba(239,68,68,0.08)',
-    cardBorder: 'border-red-500/15',
-    dropBg: 'rgba(239,68,68,0.05)',
+    headerBg:    'rgba(239,68,68,0.09)',
+    cardBorder:  'border-red-400/30',
+    dropBg:      'rgba(239,68,68,0.07)',
+    accentBorder:'rgba(239,68,68,0.35)',
   },
   being_cleaned: {
-    headerBg: 'rgba(245,158,11,0.08)',
-    cardBorder: 'border-amber-500/15',
-    dropBg: 'rgba(245,158,11,0.05)',
+    headerBg:    'rgba(245,158,11,0.09)',
+    cardBorder:  'border-amber-400/30',
+    dropBg:      'rgba(245,158,11,0.07)',
+    accentBorder:'rgba(245,158,11,0.35)',
   },
   ready: {
-    headerBg: 'rgba(16,185,129,0.08)',
-    cardBorder: 'border-emerald-500/15',
-    dropBg: 'rgba(16,185,129,0.05)',
+    headerBg:    'rgba(16,185,129,0.09)',
+    cardBorder:  'border-emerald-400/30',
+    dropBg:      'rgba(16,185,129,0.07)',
+    accentBorder:'rgba(16,185,129,0.35)',
   },
 }
 
@@ -112,6 +119,8 @@ function RoomCard({
   onDragStart: () => void
 }) {
   const col = COLUMNS.find(c => c.id === hkRoom.status)!
+  const { mode } = useTheme()
+  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
     <div
@@ -119,11 +128,14 @@ function RoomCard({
       onDragStart={onDragStart}
       className={`
         flex items-center gap-3 p-3.5 rounded-xl border cursor-grab active:cursor-grabbing
-        bg-white/[0.03] hover:bg-white/[0.05] transition-all select-none
+        transition-all select-none
         ${COL_STYLE[hkRoom.status].cardBorder}
         ${isDragging ? 'opacity-40 scale-95' : 'opacity-100 scale-100'}
       `}
-      style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+      style={{
+        background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.90)',
+        boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.30)' : '0 2px 8px rgba(0,0,0,0.08)',
+      }}
     >
       {/* Type dot */}
       <div
@@ -174,6 +186,8 @@ function DropColumn({
   onDragStart: (id: number) => void
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
+  const { mode } = useTheme()
+  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   const style = COL_STYLE[col.id]
   const colRooms = hkRooms.filter(r => r.status === col.id)
 
@@ -184,7 +198,7 @@ function DropColumn({
         className="flex items-center gap-2.5 px-4 py-3 rounded-t-2xl border border-b-0"
         style={{
           background: style.headerBg,
-          borderColor: `${style.cardBorder.replace('border-', '').replace('/15', '')}22`,
+          borderColor: style.accentBorder,
         }}
       >
         <span className={col.color}>{col.icon}</span>
@@ -202,8 +216,12 @@ function DropColumn({
       <div
         className="flex-1 rounded-b-2xl border border-t-0 p-2 space-y-2 transition-all duration-200 min-h-[200px]"
         style={{
-          background: isDragOver ? style.dropBg : 'rgba(255,255,255,0.02)',
-          borderColor: isDragOver ? style.cardBorder.replace('border-', '').replace('/15', '33') : 'rgba(255,255,255,0.06)',
+          background: isDragOver
+            ? style.dropBg
+            : isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.60)',
+          borderColor: isDragOver
+            ? style.accentBorder
+            : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
           boxShadow: isDragOver ? `inset 0 0 20px ${style.dropBg}` : 'none',
         }}
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
@@ -235,9 +253,9 @@ function DropColumn({
         {isDragOver && draggingId !== null && (
           <div
             className="rounded-xl border-2 border-dashed h-14 flex items-center justify-center"
-            style={{ borderColor: style.cardBorder.replace('border-', '').replace('/15', '44') }}
+            style={{ borderColor: style.accentBorder }}
           >
-            <p className="text-[11px]" style={{ color: col.color.replace('text-', '') }}>
+            <p className="text-[11px] font-medium" style={{ color: col.cssColor }}>
               Move here →
             </p>
           </div>
