@@ -23,6 +23,7 @@ from app.schemas.admin import (
     ManualBookingCreate,
     RoomCreate,
     RoomResponse,
+    RoomUpdate,
 )
 
 router = APIRouter()
@@ -146,6 +147,56 @@ async def create_room(
         type=new_room.room_type,
         price_per_night=float(new_room.price_per_night),
     )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /admin/rooms/{room_id}  — edit room details
+# ---------------------------------------------------------------------------
+
+@router.patch("/rooms/{room_id}", response_model=RoomResponse)
+async def update_room(
+    room_id: int,
+    payload: RoomUpdate,
+    session: AsyncSession = Depends(get_db),
+) -> RoomResponse:
+    repo = AdminRepository(session)
+    fields: dict = {}
+    if payload.room_number is not None:
+        fields["room_number"] = payload.room_number
+    if payload.type is not None:
+        fields["room_type"] = payload.type
+    if payload.price_per_night is not None:
+        if payload.price_per_night <= 0:
+            raise HTTPException(status_code=422, detail="price_per_night must be greater than 0")
+        fields["price_per_night"] = payload.price_per_night
+
+    updated = await repo.update_room(room_id, fields)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    await session.commit()
+    await session.refresh(updated)
+    return RoomResponse(
+        id=updated.id,
+        room_number=updated.room_number,
+        type=updated.room_type,
+        price_per_night=float(updated.price_per_night),
+    )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /admin/rooms/{room_id}  — soft-delete room
+# ---------------------------------------------------------------------------
+
+@router.delete("/rooms/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_room(
+    room_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    repo = AdminRepository(session)
+    deleted = await repo.soft_delete_room(room_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+    await session.commit()
 
 
 # ---------------------------------------------------------------------------

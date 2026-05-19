@@ -133,6 +133,33 @@ class AdminRepository:
         await self.db.refresh(booking)
         return booking
 
+    async def update_room(self, room_id: int, fields: dict) -> Optional[Room]:
+        """Update editable fields on an existing room."""
+        result = await self.db.execute(select(Room).where(Room.id == room_id))
+        room = result.scalar_one_or_none()
+        if room is None:
+            return None
+        if "room_number" in fields:
+            room.room_number = fields["room_number"]
+        if "room_type" in fields:
+            room.room_type = fields["room_type"]
+        if "price_per_night" in fields:
+            room.price_per_night = fields["price_per_night"]
+        await self.db.flush()
+        await self.db.refresh(room)
+        return room
+
+    async def soft_delete_room(self, room_id: int) -> Optional[Room]:
+        """Soft-delete a room by setting is_active = False."""
+        result = await self.db.execute(select(Room).where(Room.id == room_id))
+        room = result.scalar_one_or_none()
+        if room is None:
+            return None
+        room.is_active = False
+        await self.db.flush()
+        await self.db.refresh(room)
+        return room
+
     async def create_manual_booking(self, booking_data: dict) -> Booking:
         """
         Insert a new Booking record on behalf of an admin.

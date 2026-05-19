@@ -4,7 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useAdminBookings, useAdminRooms, useUpdateBookingStatus } from '../../hooks/useAdminApi'
 import { useGlowCard } from '../../hooks/useGlowCard'
 import { exportMonthlyChartExcel, exportOverviewExcel, exportRevenueTrendExcel } from '../../lib/exportExcel'
-import type { Booking, BookingStatus, RoomType } from '../../types/admin'
+import type { Booking, BookingStatus, Room, RoomType } from '../../types/admin'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -297,6 +297,173 @@ function LineChart({ data, visible, isDark }: { data: { label: string; value: nu
   )
 }
 
+// ─── Agenda Preview Modal ────────────────────────────────────────────────────
+
+const AGENDA_TYPE_COLOR: Record<string, string> = {
+  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399',
+}
+
+function AgendaPreviewModal({
+  booking,
+  roomMap,
+  onClose,
+}: {
+  booking: Booking
+  roomMap: Map<number, Room>
+  onClose: () => void
+}) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onClose, 280)
+  }
+
+  const room = roomMap.get(booking.room_id)
+  const nights = calcNights(booking.start_date, booking.end_date)
+  const cost = room ? nights * room.price_per_night : null
+  const initials = booking.guest_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+  const st = STATUS_STYLE[booking.status]
+  const statusLabel = booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
+  const typeColor = AGENDA_TYPE_COLOR[room?.type ?? ''] ?? '#B30000'
+
+  return (
+    <>
+      <div
+        className={`fixed inset-0 z-40 bg-black/55 backdrop-blur-sm transition-opacity duration-280 ${
+          visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={handleClose}
+      />
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div
+          className={`relative w-full max-w-md glass-strong rounded-2xl pointer-events-auto transform transition-all duration-280 ease-out ${
+            visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+          }`}
+          style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.07)' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                {initials}
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">{booking.guest_name}</h2>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-white/35">Booking #{booking.id}</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.badge}`}>
+                    <span className="w-1 h-1 rounded-full bg-current" />
+                    {statusLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] flex items-center justify-center text-white/40 hover:text-white transition-all shrink-0"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 space-y-4">
+            {/* Room */}
+            <div className="flex items-center gap-3 p-4 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${typeColor}18` }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                  style={{ color: typeColor }}>
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {room ? `Room ${room.room_number}` : `Room #${booking.room_id}`}
+                </p>
+                <p className="text-xs text-white/35 capitalize">
+                  {room?.type ?? 'Unknown'}
+                  {room ? ` · ${fmtEGP(room.price_per_night)}/night` : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-xl border" style={{ backgroundColor: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.15)' }}>
+                <p className="text-[10px] uppercase tracking-widest text-emerald-400/70 font-medium mb-1">Check-in</p>
+                <p className="text-sm font-semibold text-white">{booking.start_date}</p>
+              </div>
+              <div className="p-3.5 rounded-xl border" style={{ backgroundColor: 'rgba(245,158,11,0.05)', borderColor: 'rgba(245,158,11,0.15)' }}>
+                <p className="text-[10px] uppercase tracking-widest text-amber-400/70 font-medium mb-1">Check-out</p>
+                <p className="text-sm font-semibold text-white">{booking.end_date}</p>
+              </div>
+            </div>
+
+            {/* Duration + cost */}
+            {nights > 0 && (
+              <div className="flex items-center justify-between px-4 py-3 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+                  </svg>
+                  {nights} night{nights !== 1 ? 's' : ''}
+                </div>
+                {cost !== null && <p className="text-base font-bold text-white">{fmtEGP(cost)}</p>}
+              </div>
+            )}
+
+            {/* Contact */}
+            {(booking.guest_email || booking.guest_phone) && (
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-white/25 font-medium">Contact</p>
+                {booking.guest_email && (
+                  <div className="flex items-center gap-2.5 px-3 py-2.5 bg-white/[0.03] rounded-lg border border-white/[0.05]">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/30 shrink-0">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
+                    </svg>
+                    <span className="text-sm text-white/70">{booking.guest_email}</span>
+                  </div>
+                )}
+                {booking.guest_phone && (
+                  <div className="flex items-center gap-2.5 px-3 py-2.5 bg-white/[0.03] rounded-lg border border-white/[0.05]">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/30 shrink-0">
+                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.63 19.79 19.79 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                    </svg>
+                    <span className="text-sm text-white/70">{booking.guest_phone}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-white/[0.06]">
+            <button
+              onClick={handleClose}
+              className="w-full py-2.5 text-sm font-medium text-white/60 bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.07] rounded-xl transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Today's Agenda ──────────────────────────────────────────────────────────
 
 function TodayAgenda({
@@ -305,107 +472,133 @@ function TodayAgenda({
   loading,
 }: {
   bookings: Booking[]
-  roomMap: Map<number, { room_number: string; type: string }>
+  roomMap: Map<number, Room>
   loading: boolean
 }) {
   const today = new Date().toISOString().split('T')[0]
   const checkIns  = bookings.filter(b => b.start_date === today && b.status !== 'cancelled')
   const checkOuts = bookings.filter(b => b.end_date   === today && b.status !== 'cancelled')
   const isEmpty   = checkIns.length === 0 && checkOuts.length === 0
+  const [preview, setPreview] = useState<Booking | null>(null)
 
   function GuestRow({ b, type }: { b: Booking; type: 'in' | 'out' }) {
     const initials = b.guest_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
     const room = roomMap.get(b.room_id)
     return (
-      <div className="flex items-center gap-3 py-2.5">
+      <button
+        className="flex items-center gap-3 py-2.5 w-full text-left rounded-xl px-2 -mx-2 hover:bg-white/[0.04] transition-colors group cursor-pointer"
+        onClick={() => setPreview(b)}
+      >
         <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/25 flex items-center justify-center text-primary text-[11px] font-bold shrink-0">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">{b.guest_name}</p>
+          <p className="text-sm font-medium text-white truncate group-hover:text-primary/90 transition-colors">
+            {b.guest_name}
+          </p>
           <p className="text-xs text-white/35">
             {room ? `Room ${room.room_number}` : `Room ${b.room_id}`}
             {room ? ` · ${room.type}` : ''}
           </p>
         </div>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-          type === 'in'
-            ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-            : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-        }`}>
-          {type === 'in' ? 'Check-in' : 'Check-out'}
-        </span>
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+            type === 'in'
+              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+          }`}>
+            {type === 'in' ? 'Check-in' : 'Check-out'}
+          </span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            className="text-white/20 group-hover:text-white/50 transition-colors">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </div>
+      </button>
     )
   }
 
   return (
-    <div className="glass rounded-2xl border border-white/[0.06] overflow-hidden"
-      style={{ animation: 'slideUp 0.55s cubic-bezier(0.16,1,0.3,1) 90ms both' }}>
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-            </svg>
+    <>
+      <div
+        className="glass rounded-2xl border border-white/[0.06] overflow-hidden"
+        style={{ animation: 'slideUp 0.55s cubic-bezier(0.16,1,0.3,1) 90ms both' }}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Today's Agenda</p>
+              <p className="text-[11px] text-white/30">
+                {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Today's Agenda</p>
-            <p className="text-[11px] text-white/30">
-              {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
+          <div className="flex items-center gap-3">
+            {!loading && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-xs text-white/40">{checkIns.length} in</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  <span className="text-xs text-white/40">{checkOuts.length} out</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {!loading && (
-            <>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-xs text-white/40">{checkIns.length} in</span>
+
+        {/* Content */}
+        <div className="px-5 py-3 max-h-64 overflow-y-auto scroll-area-viewport">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-2.5">
+                <div className="w-8 h-8 rounded-full bg-white/[0.06] animate-pulse shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-32 bg-white/[0.05] rounded animate-pulse" />
+                  <div className="h-2.5 w-20 bg-white/[0.04] rounded animate-pulse" />
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                <span className="text-xs text-white/40">{checkOuts.length} out</span>
+            ))
+          ) : isEmpty ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-400 mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </div>
-            </>
+              <p className="text-sm font-medium text-white/40">All clear today</p>
+              <p className="text-xs text-white/25 mt-0.5">No check-ins or check-outs scheduled</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {[
+                ...checkIns.map(b => ({ b, type: 'in' as const })),
+                ...checkOuts.map(b => ({ b, type: 'out' as const })),
+              ].map(({ b, type }) => (
+                <GuestRow key={`${type}-${b.id}`} b={b} type={type} />
+              ))}
+            </div>
           )}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-5 py-3 max-h-64 overflow-y-auto scroll-area-viewport">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-2.5">
-              <div className="w-8 h-8 rounded-full bg-white/[0.06] animate-pulse shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-32 bg-white/[0.05] rounded animate-pulse" />
-                <div className="h-2.5 w-20 bg-white/[0.04] rounded animate-pulse" />
-              </div>
-            </div>
-          ))
-        ) : isEmpty ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-400 mb-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-white/40">All clear today</p>
-            <p className="text-xs text-white/25 mt-0.5">No check-ins or check-outs scheduled</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/[0.04]">
-            {[...checkIns.map(b => ({ b, type: 'in' as const })),
-              ...checkOuts.map(b => ({ b, type: 'out' as const }))
-            ].map(({ b, type }) => (
-              <GuestRow key={`${type}-${b.id}`} b={b} type={type} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Booking preview — portal-free, fixed positioning escapes overflow */}
+      {preview && (
+        <AgendaPreviewModal
+          booking={preview}
+          roomMap={roomMap}
+          onClose={() => setPreview(null)}
+        />
+      )}
+    </>
   )
 }
 
@@ -417,7 +610,7 @@ function PendingApprovals({
   loading,
 }: {
   bookings: Booking[]
-  roomMap: Map<number, { room_number: string; price_per_night: number }>
+  roomMap: Map<number, Room>
   loading: boolean
 }) {
   const updateStatus = useUpdateBookingStatus()

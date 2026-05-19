@@ -14,6 +14,12 @@ export interface RoomCreate {
   price_per_night: number
 }
 
+export interface RoomUpdate {
+  room_number?: string
+  type?: RoomType
+  price_per_night?: number
+}
+
 export interface Booking {
   id: number
   guest_name: string

@@ -95,3 +95,10 @@ class BookingUpdate(BaseModel):
     guest_phone: str | None = None
     start_date: str | None = None   # YYYY-MM-DD
     end_date: str | None = None     # YYYY-MM-DD
+
+
+class RoomUpdate(BaseModel):
+    """Body for PATCH /api/admin/rooms/{id} — edit room details."""
+    room_number: str | None = None
+    type: str | None = None
+    price_per_night: float | None = None
