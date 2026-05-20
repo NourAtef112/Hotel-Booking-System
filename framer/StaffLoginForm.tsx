@@ -7,7 +7,7 @@
 
 import { useState, FormEvent } from "react"
 
-const API_URL = "https://YOUR_RAILWAY_URL.up.railway.app"
+const API_URL = "https://master-sandbox-production.up.railway.app"
 const ADMIN_DASHBOARD_URL = "https://hotel-booking-system-azure-nu.vercel.app"
 
 export default function StaffLoginForm() {

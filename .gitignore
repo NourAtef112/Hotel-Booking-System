@@ -92,6 +92,12 @@ secret.json
 secrets.json
 postman_environment.json
 secrets/
+.mcp.json
+*-firebase-adminsdk-*.json
+
+# Local content / non-code assets
+description.txt
+*.pdf
 
 # Testing artifacts
 playwright-report/
