@@ -103,6 +103,7 @@ async def firebase_login(
         _fb_auth.RevokedIdTokenError,
         _fb_auth.UserDisabledError,
         _fb_auth.CertificateFetchError,
+        ValueError,  # raised by JWT library for completely malformed tokens
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
