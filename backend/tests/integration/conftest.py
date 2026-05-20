@@ -80,6 +80,14 @@ class _UserStore:
         self._users[user.id] = user
         return user
 
+    def update(self, user_id: int, data: dict):
+        user = self._users.get(user_id)
+        if not user:
+            return None
+        for key, value in data.items():
+            setattr(user, key, value)
+        return user
+
 
 # ── Async mock booking repository ─────────────────────────────────────────────
 
@@ -143,9 +151,24 @@ def patch_user_repo(monkeypatch, user_store):
     async def fake_create_user(session, data):
         return user_store.create(data)
 
+    async def fake_update_user(session, user_id, update_data):
+        return user_store.update(user_id, update_data)
+
     monkeypatch.setattr(_user_repo, "get_by_email", fake_get_by_email)
     monkeypatch.setattr(_user_repo, "get_by_id", fake_get_by_id)
     monkeypatch.setattr(_user_repo, "create_user", fake_create_user)
+    monkeypatch.setattr(_user_repo, "update_user", fake_update_user)
+
+
+@pytest.fixture(autouse=True)
+def clear_auth_stores():
+    """Clear module-level auth stores between tests to prevent state leakage."""
+    from app.services import auth_service
+    auth_service._token_blacklist.clear()
+    auth_service._reset_tokens.clear()
+    yield
+    auth_service._token_blacklist.clear()
+    auth_service._reset_tokens.clear()
 
 
 @pytest.fixture

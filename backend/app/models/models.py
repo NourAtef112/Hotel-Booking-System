@@ -3,7 +3,7 @@ models.py — SQLAlchemy 2.x ORM models for User, Room, and Booking.
 Single source of truth. All other model files re-export from here.
 """
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
 
@@ -66,6 +66,10 @@ class Booking(Base):
         nullable=False,
     )
     total_price = Column(Numeric(10, 2), nullable=False)
+    special_requests = Column(Text,        nullable=True)
+    phone_number     = Column(String(30),  nullable=True)
+    university_id    = Column(String(50),  nullable=True)
+    national_id      = Column(String(50),  nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="bookings")

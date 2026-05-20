@@ -71,3 +71,27 @@ class InvalidTokenError(Exception):
 
     def to_dict(self) -> dict:
         return {"error_code": self.error_code, "message": self.message}
+
+
+class InvalidResetTokenError(Exception):
+    error_code = "INVALID_RESET_TOKEN"
+    status_code = 400
+
+    def __init__(self, message: str = "Password reset token is invalid or expired"):
+        self.message = message
+        super().__init__(message)
+
+    def to_dict(self) -> dict:
+        return {"error_code": self.error_code, "message": self.message}
+
+
+class EmailConflictError(Exception):
+    error_code = "EMAIL_CONFLICT"
+    status_code = 409
+
+    def __init__(self, email: str = ""):
+        self.message = f"Email '{email}' is already taken by another account"
+        super().__init__(self.message)
+
+    def to_dict(self) -> dict:
+        return {"error_code": self.error_code, "message": self.message}

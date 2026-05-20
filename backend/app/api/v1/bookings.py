@@ -56,6 +56,10 @@ async def create_booking(
         "status": "pending",
         "total_cost": cost,
         "created_at": datetime.now(),
+        "special_requests": body.special_requests,
+        "phone_number": body.phone_number,
+        "university_id": body.university_id,
+        "national_id": body.national_id,
     })
     await db.commit()
     return BookingPublic.model_validate(booking.__dict__)

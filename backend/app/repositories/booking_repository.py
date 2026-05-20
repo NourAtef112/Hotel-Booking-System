@@ -94,6 +94,10 @@ class BookingData:
     status: str
     total_cost: float
     created_at: datetime = field(default_factory=datetime.now)
+    special_requests: Optional[str] = None
+    phone_number:     Optional[str] = None
+    university_id:    Optional[str] = None
+    national_id:      Optional[str] = None
 
 
 # ── Abstract interface (Protocol — no inheritance required) ────────────────────

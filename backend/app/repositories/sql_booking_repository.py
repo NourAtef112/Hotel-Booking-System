@@ -76,6 +76,10 @@ class SQLBookingRepository:
             check_out=data["end_date"],
             status=data["status"],
             total_price=data["total_cost"],
+            special_requests=data.get("special_requests"),
+            phone_number=data.get("phone_number"),
+            university_id=data.get("university_id"),
+            national_id=data.get("national_id"),
         )
         self._session.add(booking)
         await self._session.flush()
@@ -150,4 +154,8 @@ class SQLBookingRepository:
             status=booking.status,
             total_cost=float(booking.total_price),
             created_at=booking.created_at if booking.created_at else datetime.now(),
+            special_requests=booking.special_requests,
+            phone_number=booking.phone_number,
+            university_id=booking.university_id,
+            national_id=booking.national_id,
         )
