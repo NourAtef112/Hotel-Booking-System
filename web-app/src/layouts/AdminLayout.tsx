@@ -142,7 +142,7 @@ export default function AdminLayout() {
 
   function handleLogout() {
     clearToken()
-    navigate('/admin/bookings')
+    navigate('/login')
   }
 
   return (
