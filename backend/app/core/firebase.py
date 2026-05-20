@@ -13,12 +13,12 @@ def _init_firebase() -> None:
         return
     cred_dict = json.loads(settings.FIREBASE_CREDENTIALS_JSON)
     cred = credentials.Certificate(cred_dict)
-    firebase_admin.initialize_app(cred, {"projectId": settings.FIREBASE_PROJECT_ID})
+    firebase_admin.initialize_app(cred)  # project_id is embedded in the service account JSON
 
 
 def verify_firebase_token(id_token: str) -> dict:
     _init_firebase()
-    return firebase_auth.verify_id_token(id_token, check_revoked=True)
+    return firebase_auth.verify_id_token(id_token, check_revoked=False)
 
 
 async def verify_firebase_token_async(id_token: str) -> dict:
