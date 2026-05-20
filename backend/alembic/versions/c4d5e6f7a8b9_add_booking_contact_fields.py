@@ -15,10 +15,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("bookings", sa.Column("special_requests", sa.Text(),        nullable=True))
-    op.add_column("bookings", sa.Column("phone_number",     sa.String(30),    nullable=True))
-    op.add_column("bookings", sa.Column("university_id",    sa.String(50),    nullable=True))
-    op.add_column("bookings", sa.Column("national_id",      sa.String(50),    nullable=True))
+    op.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS special_requests TEXT")
+    op.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS phone_number VARCHAR(30)")
+    op.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS university_id VARCHAR(50)")
+    op.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS national_id VARCHAR(50)")
 
 
 def downgrade() -> None:
