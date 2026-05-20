@@ -123,10 +123,10 @@ class AdminRepository:
         booking = result.scalar_one_or_none()
         if booking is None:
             return None
-        if "check_in_date" in fields:
-            booking.check_in_date = fields["check_in_date"]
-        if "check_out_date" in fields:
-            booking.check_out_date = fields["check_out_date"]
+        if "check_in" in fields:
+            booking.check_in = fields["check_in"]
+        if "check_out" in fields:
+            booking.check_out = fields["check_out"]
         if "special_requests" in fields:
             booking.special_requests = fields["special_requests"]
         await self.db.flush()
@@ -167,7 +167,7 @@ class AdminRepository:
         Args:
             booking_data: Dict of column values matching the Booking model fields.
                           Caller must supply all NOT NULL columns:
-                            user_id, room_id, check_in_date, check_out_date,
+                            user_id, room_id, check_in, check_out,
                             total_price, and optionally status / special_requests.
 
         Returns:

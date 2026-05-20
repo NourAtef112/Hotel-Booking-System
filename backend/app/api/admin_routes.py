@@ -111,8 +111,8 @@ async def get_all_bookings(
                 guest_email=email or None,
                 guest_phone=phone or None,
                 room_id=b.room_id,
-                start_date=str(b.check_in_date),
-                end_date=str(b.check_out_date),
+                start_date=str(b.check_in),
+                end_date=str(b.check_out),
                 status=b.status,
             )
         )
@@ -229,8 +229,8 @@ async def create_manual_booking(
     booking_data = {
         "user_id": admin_id,
         "room_id": booking.room_id,
-        "check_in_date": check_in,
-        "check_out_date": check_out,
+        "check_in": check_in,
+        "check_out": check_out,
         "total_price": 0.0,
         "status": "confirmed",
         "special_requests": _encode_guest(booking.guest_name, booking.guest_email, booking.guest_phone),
@@ -246,8 +246,8 @@ async def create_manual_booking(
         guest_email=booking.guest_email or None,
         guest_phone=booking.guest_phone or None,
         room_id=new_booking.room_id,
-        start_date=str(new_booking.check_in_date),
-        end_date=str(new_booking.check_out_date),
+        start_date=str(new_booking.check_in),
+        end_date=str(new_booking.check_out),
         status=new_booking.status,
     )
 
@@ -273,13 +273,13 @@ async def update_booking(
 
     if payload.start_date is not None:
         try:
-            fields["check_in_date"] = _date.fromisoformat(payload.start_date)
+            fields["check_in"] = _date.fromisoformat(payload.start_date)
         except ValueError:
             raise HTTPException(status_code=422, detail="start_date must be YYYY-MM-DD")
 
     if payload.end_date is not None:
         try:
-            fields["check_out_date"] = _date.fromisoformat(payload.end_date)
+            fields["check_out"] = _date.fromisoformat(payload.end_date)
         except ValueError:
             raise HTTPException(status_code=422, detail="end_date must be YYYY-MM-DD")
 
@@ -309,8 +309,8 @@ async def update_booking(
         guest_email=email or None,
         guest_phone=phone or None,
         room_id=updated.room_id,
-        start_date=str(updated.check_in_date),
-        end_date=str(updated.check_out_date),
+        start_date=str(updated.check_in),
+        end_date=str(updated.check_out),
         status=updated.status,
     )
 
@@ -347,7 +347,7 @@ async def update_booking_status(
         guest_email=email or None,
         guest_phone=phone or None,
         room_id=updated.room_id,
-        start_date=str(updated.check_in_date),
-        end_date=str(updated.check_out_date),
+        start_date=str(updated.check_in),
+        end_date=str(updated.check_out),
         status=updated.status,
     )
