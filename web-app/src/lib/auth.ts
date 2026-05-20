@@ -11,3 +11,19 @@ export function getToken(): string | null {
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
+
+/**
+ * Called once on app boot. Reads ?t=<jwt> from the URL, saves it to
+ * localStorage, then removes the param so the token isn't visible in the bar.
+ */
+export function initFromUrl() {
+  const params = new URLSearchParams(window.location.search)
+  const t = params.get('t')
+  if (t) {
+    saveToken(t)
+    params.delete('t')
+    const clean = params.toString()
+    const newUrl = window.location.pathname + (clean ? `?${clean}` : '') + window.location.hash
+    window.history.replaceState({}, '', newUrl)
+  }
+}
