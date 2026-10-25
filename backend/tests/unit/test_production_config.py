@@ -36,5 +36,15 @@ def test_production_rejects_payments_without_keys():
 def test_production_accepts_safe_config():
     s = make(ENVIRONMENT="production", SECRET_KEY=STRONG,
              ALLOWED_ORIGINS="https://housing.ejust.edu.eg, https://admin.ejust.edu.eg")
-    assert s.ALLOWED_ORIGINS == ["https://housing.ejust.edu.eg", "https://admin.ejust.edu.eg"]
+    assert s.cors_origins == ["https://housing.ejust.edu.eg", "https://admin.ejust.edu.eg"]
     assert s.PAYMENTS_ENABLED is False
+
+
+def test_cors_accepts_json_list():
+    s = make(ALLOWED_ORIGINS='["http://localhost:3000","http://localhost:8081"]')
+    assert s.cors_origins == ["http://localhost:3000", "http://localhost:8081"]
+
+
+def test_database_ssl_can_be_disabled_for_local_postgres():
+    assert make(DATABASE_SSL="disable").db_connect_args == {}
+    assert make().db_connect_args == {"ssl": "require"}

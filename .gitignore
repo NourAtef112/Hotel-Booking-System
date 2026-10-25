@@ -88,6 +88,7 @@ logs/
 .env.local
 .env.*.local
 !.env.example
+!.env.production.example
 secret.json
 secrets.json
 postman_environment.json
@@ -121,3 +122,6 @@ android/local.properties
 claude.md
 skills-lock.json
 .env
+
+# Production database backups
+backups/
