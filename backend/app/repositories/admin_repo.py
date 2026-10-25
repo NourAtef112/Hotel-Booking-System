@@ -101,6 +101,20 @@ class AdminRepository:
     # CREATE — Manual Booking
     # ------------------------------------------------------------------
 
+    async def get_booking_with_user(self, booking_id: int) -> Optional[Booking]:
+        """Load a booking with its user eagerly loaded.
+
+        Async SQLAlchemy cannot lazy-load relationships, so any code that reads
+        booking.user after a write must reload through this method.
+        """
+        result = await self.db.execute(
+            select(Booking)
+            .where(Booking.id == booking_id)
+            .options(selectinload(Booking.user))
+            .execution_options(populate_existing=True)
+        )
+        return result.scalar_one_or_none()
+
     async def update_booking_status(self, booking_id: int, new_status: str) -> Optional[Booking]:
         """
         Update the status of an existing booking.
@@ -113,8 +127,7 @@ class AdminRepository:
             return None
         booking.status = new_status
         await self.db.flush()
-        await self.db.refresh(booking)
-        return booking
+        return await self.get_booking_with_user(booking_id)
 
     async def update_booking(self, booking_id: int, fields: dict) -> Optional[Booking]:
         """Update editable fields (dates, guest name) on an existing booking."""
@@ -130,8 +143,7 @@ class AdminRepository:
         if "special_requests" in fields:
             booking.special_requests = fields["special_requests"]
         await self.db.flush()
-        await self.db.refresh(booking)
-        return booking
+        return await self.get_booking_with_user(booking_id)
 
     async def update_room(self, room_id: int, fields: dict) -> Optional[Room]:
         """Update editable fields on an existing room."""

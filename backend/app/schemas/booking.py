@@ -27,11 +27,11 @@ class BookingCreate(BaseModel):
     def validate_dates(self) -> "BookingCreate":
         today = date.today()
         if self.start_date < today:
-            raise ValueError("start_date cannot be in the past — mesh momken tebook fe zaman fat")
+            raise ValueError("Check-in date cannot be in the past.")
         if self.start_date >= self.end_date:
-            raise ValueError("end_date must be after start_date — lazem te2am fel 3adad")
+            raise ValueError("Check-out date must be after the check-in date.")
         if (self.end_date - self.start_date).days > 30:
-            raise ValueError("Maximum booking duration is 30 nights — da 3omro mesh hotel")
+            raise ValueError("Bookings are limited to 30 nights.")
         return self
 
 

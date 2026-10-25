@@ -8,7 +8,12 @@ Request schemas  (no `id`)  → validate incoming POST body
 Response schemas (with `id`) → shape outgoing JSON, read from ORM objects
 """
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+# Must match the room_type enum in the database (app/models/models.py).
+RoomType = Literal["single", "double", "suite", "vip_suite"]
 
 
 # ---------------------------------------------------------------------------
@@ -22,9 +27,9 @@ class RoomCreate(BaseModel):
     Creates a new room in the system.
     """
 
-    room_number: str
-    type: str
-    price_per_night: float
+    room_number: str = Field(min_length=1, max_length=100)
+    type: RoomType
+    price_per_night: float = Field(gt=0, le=1_000_000)
 
 
 class ManualBookingCreate(BaseModel):
@@ -99,6 +104,6 @@ class BookingUpdate(BaseModel):
 
 class RoomUpdate(BaseModel):
     """Body for PATCH /api/admin/rooms/{id} — edit room details."""
-    room_number: str | None = None
-    type: str | None = None
-    price_per_night: float | None = None
+    room_number: str | None = Field(default=None, min_length=1, max_length=100)
+    type: RoomType | None = None
+    price_per_night: float | None = Field(default=None, gt=0, le=1_000_000)

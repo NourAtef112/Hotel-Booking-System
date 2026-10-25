@@ -45,8 +45,17 @@ class SQLBookingRepository:
         self, room_id: int, check_in: date, check_out: date
     ) -> list[BookingData]:
         """Return active bookings for the room that overlap with [check_in, check_out).
-        Uses SELECT FOR UPDATE to prevent concurrent double-bookings.
+
+        Concurrency: first locks the room row (SELECT ... FOR UPDATE). Every booking
+        attempt for the same room queues on that lock until the previous transaction
+        commits, so the overlap query below always sees the latest bookings. Locking
+        only the booking rows is not enough: when no conflicting booking exists yet
+        there is nothing to lock, and two requests could both insert (phantom rows).
+        The bookings_no_overlap exclusion constraint is the final backstop.
         """
+        await self._session.execute(
+            select(Room.id).where(Room.id == room_id).with_for_update()
+        )
         result = await self._session.execute(
             select(Booking)
             .where(Booking.room_id == room_id)

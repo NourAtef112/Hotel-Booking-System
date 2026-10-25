@@ -26,6 +26,7 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }>
   pending:   { label: 'Pending',   className: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
   confirmed: { label: 'Confirmed', className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   cancelled: { label: 'Cancelled', className: 'bg-red-500/10 text-red-400 border-red-500/20' },
+  rejected:  { label: 'Rejected',  className: 'bg-rose-500/10 text-rose-300 border-rose-500/20' },
   completed: { label: 'Completed', className: 'bg-white/5 text-white/40 border-white/10' },
 }
 

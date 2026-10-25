@@ -77,7 +77,7 @@ const COL_STYLE: Record<HKStatus, { headerBg: string; cardBorder: string; dropBg
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399',
+  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', vip_suite: '#34d399',
 }
 
 // ─── Storage ──────────────────────────────────────────────────────────────────

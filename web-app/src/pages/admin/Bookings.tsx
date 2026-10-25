@@ -39,6 +39,7 @@ function initials(name: string) {
 const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }> = {
   pending:   { label: 'Pending',   className: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
   confirmed: { label: 'Confirmed', className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  rejected:  { label: 'Rejected',  className: 'bg-rose-500/10 text-rose-300 border-rose-500/20' },
   cancelled: { label: 'Cancelled', className: 'bg-red-500/10 text-red-400 border-red-500/20' },
   completed: { label: 'Completed', className: 'bg-white/5 text-white/40 border-white/10' },
 }
@@ -47,6 +48,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'All Statuses' },
   { value: 'pending',   label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
+  { value: 'rejected',  label: 'Rejected' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'completed', label: 'Completed' },
 ]
@@ -54,20 +56,20 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 const TRANSITIONS: Record<BookingStatus, { status: BookingStatus; label: string; cls: string }[]> = {
   pending: [
     { status: 'confirmed', label: 'Confirm',       cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20' },
+    { status: 'rejected',  label: 'Reject',        cls: 'text-rose-300 bg-rose-500/10 border-rose-500/25 hover:bg-rose-500/20' },
     { status: 'cancelled', label: 'Cancel Booking', cls: 'text-red-400 bg-red-500/10 border-red-500/25 hover:bg-red-500/20' },
   ],
   confirmed: [
     { status: 'completed', label: 'Mark Completed', cls: 'text-white/60 bg-white/[0.05] border-white/[0.10] hover:bg-white/[0.09]' },
     { status: 'cancelled', label: 'Cancel Booking', cls: 'text-red-400 bg-red-500/10 border-red-500/25 hover:bg-red-500/20' },
   ],
-  cancelled: [
-    { status: 'confirmed', label: 'Re-confirm', cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25 hover:bg-emerald-500/20' },
-  ],
+  rejected: [],
+  cancelled: [], // final: a cancelled booking cannot be reopened (backend enforces this)
   completed: [],
 }
 
 const ROOM_TYPE_COLOR: Record<string, string> = {
-  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399',
+  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', vip_suite: '#34d399',
 }
 
 const emptyBookingForm: ManualBookingCreate = { guest_name: '', guest_email: '', guest_phone: '', room_id: 0, start_date: '', end_date: '' }
@@ -189,9 +191,9 @@ function RoomPickerSelect({
 // ─── Status Flow Bar ─────────────────────────────────────────────────────────
 
 function StatusFlowBar({ status }: { status: BookingStatus }) {
-  const isCancelled = status === 'cancelled'
+  const isCancelled = status === 'cancelled' || status === 'rejected'
   const order = ['pending', 'confirmed', 'completed'] as const
-  const currentIdx = isCancelled ? -1 : order.indexOf(status)
+  const currentIdx = isCancelled ? -1 : order.indexOf(status as typeof order[number])
 
   const STEP = {
     pending:   { label: 'Pending',   activeColor: '#f59e0b' },

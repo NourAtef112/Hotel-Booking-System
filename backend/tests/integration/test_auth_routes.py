@@ -71,12 +71,13 @@ def test_login_with_nonexistent_email_returns_401(client):
 # ── Protected route auth guards ───────────────────────────────────────────────
 
 def test_protected_route_without_token_returns_401(client):
-    resp = client.get("/api/v1/rooms/")
+    # Room listing is public by design; /bookings/me requires a login.
+    resp = client.get("/api/v1/bookings/me")
     assert resp.status_code == 401
 
 
 def test_protected_route_with_invalid_token_returns_401(client):
-    resp = client.get("/api/v1/rooms/", headers={"Authorization": "Bearer invalidtoken"})
+    resp = client.get("/api/v1/bookings/me", headers={"Authorization": "Bearer invalidtoken"})
     assert resp.status_code == 401
 
 

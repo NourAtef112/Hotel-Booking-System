@@ -1,9 +1,30 @@
 import axios from 'axios'
+import { clearToken, getToken } from './auth'
 import type { Booking, BookingStatus, BookingUpdate, ManualBookingCreate, Room, RoomCreate, RoomUpdate } from '../types/admin'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
 })
+
+// Every /api/admin route requires an admin JWT.
+http.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// Expired, revoked, or non-admin token: drop it and send the user to login.
+http.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err?.response?.status
+    if (status === 401 || status === 403) {
+      clearToken()
+      if (window.location.pathname !== '/login') window.location.assign('/login')
+    }
+    return Promise.reject(err)
+  },
+)
 
 export const adminApi = {
   getRooms: (skip = 0, limit = 200) =>

@@ -48,7 +48,7 @@ async def run_async_migrations() -> None:
         cfg,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"ssl": "require"},
+        connect_args=settings.db_connect_args,
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

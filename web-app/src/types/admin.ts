@@ -1,5 +1,5 @@
-export type RoomType = 'single' | 'double' | 'suite' | 'family'
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+export type RoomType = 'single' | 'double' | 'suite' | 'vip_suite'
+export type BookingStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed'
 
 export interface Room {
   id: number
