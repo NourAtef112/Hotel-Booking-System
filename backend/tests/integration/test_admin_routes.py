@@ -7,11 +7,12 @@ MockBookingRepository handles booking state in-memory.
 from __future__ import annotations
 
 import pytest
+from tests.utils.dates import future
 
 
 # ── Helper: create a pending booking as the guest user ───────────────────────
 
-def _create_booking(client, auth_headers, room_id=2, start="2026-09-01", end="2026-09-05"):
+def _create_booking(client, auth_headers, room_id=2, start=future(90), end=future(94)):
     resp = client.post("/api/v1/bookings/", headers=auth_headers, json={
         "room_id": room_id,
         "start_date": start,
@@ -55,7 +56,7 @@ def test_admin_can_confirm_booking(client, auth_headers, admin_headers):
 
 
 def test_admin_can_reject_booking(client, auth_headers, admin_headers):
-    booking = _create_booking(client, auth_headers, room_id=3, start="2026-09-10", end="2026-09-14")
+    booking = _create_booking(client, auth_headers, room_id=3, start=future(100), end=future(104))
     booking_id = booking["id"]
 
     resp = client.patch(
@@ -68,7 +69,7 @@ def test_admin_can_reject_booking(client, auth_headers, admin_headers):
 
 
 def test_admin_cannot_confirm_already_cancelled_booking(client, auth_headers, admin_headers):
-    booking = _create_booking(client, auth_headers, room_id=2, start="2026-10-01", end="2026-10-05")
+    booking = _create_booking(client, auth_headers, room_id=2, start=future(120), end=future(124))
     booking_id = booking["id"]
 
     # Cancel the booking (pending → cancelled is allowed)

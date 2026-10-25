@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 import app.services.room_service as _room_svc
+from tests.utils.dates import future
 
 # ── Shared mock room data (matches RoomResponse schema) ──────────────────────
 
@@ -79,8 +80,8 @@ def test_get_room_not_found_returns_404(client, auth_headers):
 def test_create_booking_successfully(client, auth_headers):
     resp = client.post("/api/v1/bookings/", headers=auth_headers, json={
         "room_id": 2,
-        "start_date": "2026-07-01",
-        "end_date": "2026-07-05",
+        "start_date": future(30),
+        "end_date": future(34),
     })
     assert resp.status_code == 201
     body = resp.json()
@@ -97,14 +98,14 @@ def test_create_booking_sets_user_id_from_token(client):
     headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
 
     resp = client.post("/api/v1/bookings/", headers=headers, json={
-        "room_id": 2, "start_date": "2026-07-01", "end_date": "2026-07-05",
+        "room_id": 2, "start_date": future(30), "end_date": future(34),
     })
     assert resp.status_code == 201
     assert resp.json()["user_id"] == user_id
 
 
 def test_create_booking_overlap_returns_409(client, auth_headers):
-    payload = {"room_id": 2, "start_date": "2026-07-10", "end_date": "2026-07-15"}
+    payload = {"room_id": 2, "start_date": future(40), "end_date": future(45)}
     first = client.post("/api/v1/bookings/", headers=auth_headers, json=payload)
     assert first.status_code == 201
 
@@ -133,12 +134,12 @@ def test_get_my_bookings_returns_only_own_bookings(client):
 
     # User A books room 2, User B books room 3 (different dates to avoid overlap)
     r1 = client.post("/api/v1/bookings/", headers=headers_a, json={
-        "room_id": 2, "start_date": "2026-08-01", "end_date": "2026-08-05",
+        "room_id": 2, "start_date": future(60), "end_date": future(64),
     })
     assert r1.status_code == 201
 
     r2 = client.post("/api/v1/bookings/", headers=headers_b, json={
-        "room_id": 3, "start_date": "2026-08-10", "end_date": "2026-08-14",
+        "room_id": 3, "start_date": future(70), "end_date": future(74),
     })
     assert r2.status_code == 201
 
