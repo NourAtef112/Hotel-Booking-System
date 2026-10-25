@@ -3,7 +3,7 @@ config.py — Application configuration via environment variables.
 Uses pydantic-settings with Pydantic v2 model_config (SettingsConfigDict).
 """
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,8 +50,23 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_HOURS: int = 24
 
-    # CORS
+    # CORS — comma-separated list in env, e.g. "https://housing.ejust.edu.eg,https://admin.ejust.edu.eg"
     ALLOWED_ORIGINS: list[str] = ["*"]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def split_origins(cls, v):
+        if isinstance(v, str) and not v.strip().startswith("["):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
+
+    # Feature switches
+    # Online card payment via Paymob. Off by default: guests pay at reception and an
+    # admin confirms the booking. Turn on once the university has a Paymob merchant account.
+    PAYMENTS_ENABLED: bool = False
+    # Insert sample rooms on startup when the rooms table is empty. Off in production
+    # so the university enters its real room inventory.
+    SEED_DEMO_DATA: bool = True
 
     # Firebase Auth
     FIREBASE_PROJECT_ID: str = ""
@@ -64,6 +79,24 @@ class Settings(BaseSettings):
     PAYMOB_INTEGRATION_ID: str = ""
     PAYMOB_BASE_URL: str = "https://accept.paymob.com"
     BASE_URL: str = "http://localhost:8000"
+
+    @model_validator(mode="after")
+    def enforce_production_safety(self) -> "Settings":
+        """Refuse to boot in production with development defaults."""
+        if self.ENVIRONMENT.lower() != "production":
+            return self
+        problems = []
+        if self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION" or len(self.SECRET_KEY) < 32:
+            problems.append("SECRET_KEY must be set to a random value of at least 32 characters")
+        if "*" in self.ALLOWED_ORIGINS:
+            problems.append("ALLOWED_ORIGINS must list the real site URLs, not '*'")
+        if self.DEBUG:
+            problems.append("DEBUG must be false")
+        if self.PAYMENTS_ENABLED and not (self.PAYMOB_SECRET_KEY and self.PAYMOB_HMAC_KEY):
+            problems.append("PAYMENTS_ENABLED requires PAYMOB_SECRET_KEY and PAYMOB_HMAC_KEY")
+        if problems:
+            raise ValueError("Unsafe production configuration: " + "; ".join(problems))
+        return self
 
 
 settings = Settings()

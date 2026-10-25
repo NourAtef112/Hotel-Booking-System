@@ -83,8 +83,8 @@ class BookingService:
             ):
                 label = getattr(room, "room_number", room_id)
                 raise BookingOverlapError(
-                    f"El oda {label} makhtooba men "
-                    f"{booking.start_date} le {booking.end_date}"
+                    f"Room {label} is already booked from "
+                    f"{booking.start_date} to {booking.end_date}."
                 )
 
         # Step 4: el cost = price × 3adad el layali, bas

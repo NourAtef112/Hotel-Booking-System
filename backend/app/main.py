@@ -14,16 +14,20 @@ from app.core.database import AsyncSessionLocal, create_all_tables
 from app.mocks.seed_rooms import run_seed
 from app.core.errors import generic_exception_handler, validation_exception_handler
 
+_is_prod = settings.ENVIRONMENT.lower() == "production"
+
 app = FastAPI(
     title="University Guest Housing API",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    # Interactive API docs are for development; hide them on the production server.
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,14 +39,16 @@ app.add_exception_handler(Exception, generic_exception_handler)
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(ws_router)
 app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
-app.include_router(payment_router)
+if settings.PAYMENTS_ENABLED:
+    app.include_router(payment_router)
 
 
 @app.on_event("startup")
 async def on_startup() -> None:
     await create_all_tables()
-    async with AsyncSessionLocal() as session:
-        await run_seed(session)
+    if settings.SEED_DEMO_DATA:
+        async with AsyncSessionLocal() as session:
+            await run_seed(session)
 
 
 @app.get("/health", tags=["health"])
