@@ -3,17 +3,17 @@ import CustomSelect from '../../components/CustomSelect'
 import { useAdminBookings, useAdminRooms, useCreateRoom, useDeleteRoom, useUpdateRoom } from '../../hooks/useAdminApi'
 import type { Booking, Room, RoomCreate, RoomType, RoomUpdate } from '../../types/admin'
 
-const ROOM_TYPES: RoomType[] = ['single', 'double', 'suite', 'family']
+const ROOM_TYPES: RoomType[] = ['single', 'double', 'suite', 'vip_suite']
 
 const TYPE_CONFIG: Record<RoomType, { label: string; dot: string; className: string }> = {
   single:  { label: 'Single',  dot: 'bg-blue-400',   className: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
   double:  { label: 'Double',  dot: 'bg-purple-400', className: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
   suite:   { label: 'Suite',   dot: 'bg-amber-400',  className: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  family:  { label: 'Family',  dot: 'bg-emerald-400',className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  vip_suite: { label: 'VIP Suite',  dot: 'bg-emerald-400',className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
 }
 
 const TYPE_COLOR: Record<string, string> = {
-  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399',
+  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', vip_suite: '#34d399',
 }
 
 const STATUS_BADGE: Record<string, string> = {

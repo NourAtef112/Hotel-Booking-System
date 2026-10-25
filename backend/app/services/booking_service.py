@@ -19,15 +19,22 @@ if TYPE_CHECKING:
     from app.repositories.booking_repository import IBookingRepository, BookingData
 
 
-# ── State machine: el transitions el masmo7a ──────────────────────────────────
-# pending → confirmed ✓   pending → rejected ✓   any → cancelled ✓
-# cancelled → anything ✗  rejected → confirmed ✗
+# ── Booking state machine ─────────────────────────────────────────────────────
+# pending   → confirmed | rejected | cancelled
+# confirmed → completed (guest checked out) | cancelled
+# rejected  → cancelled
+# cancelled, completed → terminal
 _ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     "pending":   {"confirmed", "rejected", "cancelled"},
-    "confirmed": {"cancelled"},
+    "confirmed": {"completed", "cancelled"},
     "rejected":  {"cancelled"},
-    "cancelled": set(),   # terminal — maffish 7aga ba3d el cancel
+    "cancelled": set(),
+    "completed": set(),
 }
+
+
+def can_transition(from_status: str, to_status: str) -> bool:
+    return to_status in _ALLOWED_TRANSITIONS.get(from_status, set())
 
 
 # ── Pure utility functions (module-level — importable directly) ────────────────

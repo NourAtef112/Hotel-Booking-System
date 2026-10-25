@@ -24,10 +24,11 @@ const STATUS_COLOR: Record<BookingStatus, { bg: string; border: string; text: st
   pending:   { bg: 'rgba(245,158,11,0.18)',  border: 'rgba(245,158,11,0.35)',  text: '#fbbf24' },
   completed: { bg: 'rgba(148,163,184,0.15)', border: 'rgba(148,163,184,0.30)', text: '#94a3b8' },
   cancelled: { bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.30)',   text: '#f87171' },
+  rejected:  { bg: 'rgba(244,63,94,0.10)',   border: 'rgba(244,63,94,0.28)',   text: '#fda4af' },
 }
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
-  confirmed: 'Confirmed', pending: 'Pending', completed: 'Completed', cancelled: 'Cancelled',
+  confirmed: 'Confirmed', pending: 'Pending', completed: 'Completed', cancelled: 'Cancelled', rejected: 'Rejected',
 }
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -432,7 +433,7 @@ export default function Calendar() {
                     >
                       <div
                         className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: { single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399' }[room.type] ?? '#fff' }}
+                        style={{ background: { single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', vip_suite: '#34d399' }[room.type] ?? '#fff' }}
                       />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold text-white/80 leading-none truncate">Room {room.room_number}</p>

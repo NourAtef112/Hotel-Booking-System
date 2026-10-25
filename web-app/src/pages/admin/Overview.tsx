@@ -14,13 +14,14 @@ const TYPE_COLOR: Record<RoomType, string> = {
   single: '#60a5fa',
   double: '#a78bfa',
   suite:  '#fbbf24',
-  family: '#34d399',
+  vip_suite: '#34d399',
 }
 
 const STATUS_STYLE: Record<BookingStatus, { bar: string; text: string; badge: string }> = {
   confirmed: { bar: 'bg-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   pending:   { bar: 'bg-amber-500',   text: 'text-amber-400',   badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
   cancelled: { bar: 'bg-red-500',     text: 'text-red-400',     badge: 'bg-red-500/10 text-red-400 border-red-500/20' },
+  rejected:  { bar: 'bg-rose-400',    text: 'text-rose-300',    badge: 'bg-rose-500/10 text-rose-300 border-rose-500/20' },
   completed: { bar: 'bg-white/25',    text: 'text-white/40',    badge: 'bg-white/5 text-white/40 border-white/10' },
 }
 
@@ -300,7 +301,7 @@ function LineChart({ data, visible, isDark }: { data: { label: string; value: nu
 // ─── Agenda Preview Modal ────────────────────────────────────────────────────
 
 const AGENDA_TYPE_COLOR: Record<string, string> = {
-  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', family: '#34d399',
+  single: '#60a5fa', double: '#a78bfa', suite: '#fbbf24', vip_suite: '#34d399',
 }
 
 function AgendaPreviewModal({
@@ -740,6 +741,7 @@ export default function Overview() {
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
     pending:   bookings.filter(b => b.status === 'pending').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
+    rejected:  bookings.filter(b => b.status === 'rejected').length,
     completed: bookings.filter(b => b.status === 'completed').length,
   }), [bookings])
 

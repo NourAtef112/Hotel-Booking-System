@@ -16,12 +16,14 @@ from datetime import date as _date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.api.v1.auth import get_current_admin
 from app.models.user import User
 from app.repositories.admin_repo import AdminRepository
+from app.services.booking_service import can_transition
 from app.schemas.admin import (
     BookingResponse,
     BookingStatusUpdate,
@@ -38,6 +40,15 @@ router = APIRouter(dependencies=[Depends(get_current_admin)])
 def _encode_guest(name: str, email: str | None, phone: str | None) -> str:
     """Encode guest contact info into the special_requests field."""
     return f"Manual booking for guest: {name}|{email or ''}|{phone or ''}"
+
+
+
+def _overlap_409() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={"error_code": "BOOKING_OVERLAP",
+                "message": "The room already has an active booking on those dates."},
+    )
 
 
 def _parse_guest(special_requests: str | None, user=None) -> tuple[str, str, str]:
@@ -64,7 +75,7 @@ async def _get_any_admin_id(session: AsyncSession) -> int:
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No admin user found in database. Run create_admin.py first.",
+            detail="No admin user found in database. Run: python -m scripts.create_admin --email <email>",
         )
     return row
 
@@ -140,11 +151,18 @@ async def create_room(
         "room_number": room.room_number,
         "room_type": room.type,
         "price_per_night": room.price_per_night,
-        "capacity": 1,
     }
 
-    new_room = await repo.create_room(room_data)
-    await session.commit()
+    try:
+        new_room = await repo.create_room(room_data)
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"error_code": "ROOM_NUMBER_TAKEN",
+                    "message": f"A room numbered '{room.room_number}' already exists."},
+        )
     await session.refresh(new_room)
 
     return RoomResponse(
@@ -242,9 +260,12 @@ async def create_manual_booking(
         "special_requests": _encode_guest(booking.guest_name, booking.guest_email, booking.guest_phone),
     }
 
-    new_booking = await repo.create_manual_booking(booking_data)
-    await session.commit()
-    await session.refresh(new_booking)
+    try:
+        new_booking = await repo.create_manual_booking(booking_data)
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise _overlap_409()
 
     return BookingResponse(
         id=new_booking.id,
@@ -289,7 +310,11 @@ async def update_booking(
         except ValueError:
             raise HTTPException(status_code=422, detail="end_date must be YYYY-MM-DD")
 
-    updated = await repo.update_booking(booking_id, fields)
+    try:
+        updated = await repo.update_booking(booking_id, fields)
+    except IntegrityError:
+        await session.rollback()
+        raise _overlap_409()
     if updated is None:
         raise HTTPException(status_code=404, detail="Booking not found")
 
@@ -302,8 +327,12 @@ async def update_booking(
         updated.special_requests = _encode_guest(new_name, new_email, new_phone)
         await session.flush()
 
-    await session.commit()
-    await session.refresh(updated)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise _overlap_409()
+    updated = await repo.get_booking_with_user(booking_id)
 
     name, email, phone = _parse_guest(updated.special_requests, getattr(updated, "user", None))
     if not name:
@@ -321,7 +350,7 @@ async def update_booking(
     )
 
 
-ALLOWED_STATUSES = {"pending", "confirmed", "cancelled", "completed"}
+ALLOWED_STATUSES = {"pending", "confirmed", "rejected", "cancelled", "completed"}
 
 @router.patch("/bookings/{booking_id}/status", response_model=BookingResponse)
 async def update_booking_status(
@@ -336,12 +365,23 @@ async def update_booking_status(
         )
 
     repo = AdminRepository(session)
-    updated = await repo.update_booking_status(booking_id, payload.status)
-
-    if updated is None:
+    current = await repo.get_booking_with_user(booking_id)
+    if current is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if current.status != payload.status and not can_transition(current.status, payload.status):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error_code": "ILLEGAL_STATE_TRANSITION",
+                    "message": f"A booking cannot move from '{current.status}' to '{payload.status}'."},
+        )
 
-    await session.commit()
+    try:
+        updated = await repo.update_booking_status(booking_id, payload.status)
+        await session.commit()
+    except IntegrityError:
+        # e.g. re-activating a booking whose dates were taken in the meantime
+        await session.rollback()
+        raise _overlap_409()
 
     name, email, phone = _parse_guest(updated.special_requests, getattr(updated, "user", None))
     if not name:

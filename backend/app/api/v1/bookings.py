@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.auth import get_current_user
@@ -48,20 +49,28 @@ async def create_booking(
         )
 
     cost = calculate_cost(room.price_per_night, body.start_date, body.end_date)
-    booking = await repo.create_booking({
-        "user_id": current_user.id,
-        "room_id": body.room_id,
-        "start_date": body.start_date,
-        "end_date": body.end_date,
-        "status": "pending",
-        "total_cost": cost,
-        "created_at": datetime.now(),
-        "special_requests": body.special_requests,
-        "phone_number": body.phone_number,
-        "university_id": body.university_id,
-        "national_id": body.national_id,
-    })
-    await db.commit()
+    try:
+        booking = await repo.create_booking({
+            "user_id": current_user.id,
+            "room_id": body.room_id,
+            "start_date": body.start_date,
+            "end_date": body.end_date,
+            "status": "pending",
+            "total_cost": cost,
+            "created_at": datetime.now(),
+            "special_requests": body.special_requests,
+            "phone_number": body.phone_number,
+            "university_id": body.university_id,
+            "national_id": body.national_id,
+        })
+        await db.commit()
+    except IntegrityError:
+        # bookings_no_overlap constraint: another request won the race for these dates
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"error_code": "BOOKING_OVERLAP", "message": "Room is already booked for those dates"},
+        )
     return BookingPublic.model_validate(booking.__dict__)
 
 

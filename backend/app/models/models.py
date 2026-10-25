@@ -61,7 +61,9 @@ class Booking(Base):
     check_in = Column(Date, nullable=False)
     check_out = Column(Date, nullable=False)
     status = Column(
-        Enum("pending", "confirmed", "rejected", "cancelled", name="booking_status"),
+        Enum("pending", "confirmed", "rejected", "cancelled", "completed", name="booking_status"),
+        # Overlap is also blocked by the bookings_no_overlap exclusion constraint
+        # (migration d5e6f7a8b9c0).
         default="pending",
         nullable=False,
     )
