@@ -7,7 +7,25 @@ import { startTransition, useCallback, useEffect, useMemo, useState, type CSSPro
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 const TOKEN_KEY = "ejust_guest_token"
+// Saved by the home page form (HeroBookingOverride): dates and phone carry over here
+const DRAFT_KEY = "ejust_booking_draft"
 const MAX_NIGHTS = 30
+
+function readDraft(): any {
+    if (typeof window === "undefined") return null
+    try {
+        return JSON.parse(window.localStorage.getItem(DRAFT_KEY) || "null")
+    } catch {
+        return null
+    }
+}
+
+function clearDraft() {
+    if (typeof window === "undefined") return
+    try {
+        window.localStorage.removeItem(DRAFT_KEY)
+    } catch {}
+}
 
 type Room = { id: number; name: string; room_type: string; capacity: number; price_per_night: number; status: string }
 
@@ -106,6 +124,22 @@ export default function BookingWidget(props: BookingWidgetProps) {
     useEffect(() => {
         if (isCanvas) return
         startTransition(() => setToken(readToken()))
+        const draft = readDraft()
+        if (draft) {
+            const iso = /^\d{4}-\d{2}-\d{2}$/
+            const today = isoDay(0)
+            startTransition(() => {
+                if (iso.test(draft.checkIn || "") && draft.checkIn >= today) {
+                    setCheckIn(draft.checkIn)
+                    if (iso.test(draft.checkOut || "") && draft.checkOut > draft.checkIn) setCheckOut(draft.checkOut)
+                    else {
+                        const [y, m, d] = draft.checkIn.split("-").map(Number)
+                        setCheckOut(new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10))
+                    }
+                }
+                if (draft.phone) setPhone(draft.phone)
+            })
+        }
         let cancelled = false
         ;(async () => {
             try {
@@ -182,6 +216,7 @@ export default function BookingWidget(props: BookingWidgetProps) {
                     startTransition(() => setError(errorMessage(body, res.status)))
                     return
                 }
+                clearDraft()
                 startTransition(() => setCreated(body))
             } catch {
                 startTransition(() => setError(`Can't reach the booking server at ${base}. Please try again later.`))

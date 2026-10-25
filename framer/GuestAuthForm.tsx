@@ -7,6 +7,17 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 const TOKEN_KEY = "ejust_guest_token"
 const NAME_KEY = "ejust_guest_name"
+// Saved by the home page form (HeroBookingOverride) so guests don't retype their details
+const DRAFT_KEY = "ejust_booking_draft"
+
+function readDraft(): any {
+    if (typeof window === "undefined") return null
+    try {
+        return JSON.parse(window.localStorage.getItem(DRAFT_KEY) || "null")
+    } catch {
+        return null
+    }
+}
 
 function saveSession(token: string, name: string) {
     if (typeof window === "undefined") return
@@ -80,6 +91,14 @@ export default function GuestAuthForm(props: GuestAuthFormProps) {
         const n = new URLSearchParams(window.location.search).get("next")
         // Only allow same-site paths to avoid open redirects
         if (n && n.startsWith("/") && !n.startsWith("//")) startTransition(() => setNext(n))
+        const draft = readDraft()
+        if (draft) {
+            const fullName = [draft.firstName, draft.lastName].filter(Boolean).join(" ")
+            startTransition(() => {
+                if (fullName) setName((v) => v || fullName)
+                if (draft.email) setEmail((v) => v || draft.email)
+            })
+        }
     }, [])
 
     const onSubmit = useCallback(
