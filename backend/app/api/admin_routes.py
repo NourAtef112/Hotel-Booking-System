@@ -1,5 +1,10 @@
 """
-admin_routes.py — Admin dashboard endpoints (auth-free for development).
+admin_routes.py — Admin dashboard endpoints.
+
+Every route requires a valid JWT for a user with role == "admin"
+(enforced once, at router level, via get_current_admin). Guests get 403,
+anonymous callers get 401. These routes expose guest PII (phone numbers,
+national IDs), so the guard must never be removed.
 
 Routes (all prefixed with /api/admin by main.py):
   GET  /admin/bookings          → list all bookings (paginated)
@@ -14,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
+from app.api.v1.auth import get_current_admin
 from app.models.user import User
 from app.repositories.admin_repo import AdminRepository
 from app.schemas.admin import (
@@ -26,7 +32,7 @@ from app.schemas.admin import (
     RoomUpdate,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_admin)])
 
 
 def _encode_guest(name: str, email: str | None, phone: str | None) -> str:
