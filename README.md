@@ -8,6 +8,8 @@ Administrators manage inventory and approve bookings through a dedicated dashboa
 
 **Backend:** Railway (FastAPI + PostgreSQL via Supabase) | **Frontend:** Vercel (React + TypeScript)
 
+**Installing at E-JUST on university servers:** see [DEPLOYMENT.md](DEPLOYMENT.md) (one-command Docker install).
+
 ---
 
 ## Project Status
